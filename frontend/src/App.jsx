@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import Login from './pages/login'
 import Cadastro from './pages/cadastro'
+import Resultado from './pages/resultado_busca'
+import Livro from './pages/livro'
 import './App.css'
 
 const USER_KEY = 'biblioFacil_user'
@@ -54,6 +56,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/cadastro" element={<Cadastro />} />
         <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/resultado_busca" element={<Resultado />}/>
+        <Route path="/livro" element={<Livro />}/>
       </Routes>
     </BrowserRouter>
   )
