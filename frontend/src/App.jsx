@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
-import Login from './pages/login'
-import Cadastro from './pages/cadastro'
+import Login from './pages/login_cadastro/login'
+import Cadastro from './pages/login_cadastro/cadastro'
 import Resultado from './pages/resultado_busca'
 import Livro from './pages/livro'
 import './App.css'
@@ -16,24 +16,18 @@ function tipoLabel(tipo) {
 function Home() {
   const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(USER_KEY) : null
   const user = raw ? JSON.parse(raw) : null
+
   if (!user) return <Navigate to="/login" replace />
+
   return (
-    <div style={{ padding: 24, fontFamily: 'Lato, sans-serif', background: '#f0e8df', minHeight: '100vh' }}>
-      <p style={{ fontSize: '1.1rem', color: '#4a3728' }}>Olá, {user.nome}.</p>
-      <p style={{ color: '#7a6555', marginTop: 8 }}>E-mail: {user.email}</p>
-      <p style={{ color: '#7a6555' }}>Tipo: {tipoLabel(user.tipo)}</p>
+    <div className="home-container">
+      <p className="welcome-text">Olá, {user.nome}.</p>
+      <p className="user-info">E-mail: {user.email}</p>
+      <p className="user-info">Tipo: {tipoLabel(user.tipo)}</p>
+      
       <button
         type="button"
-        style={{
-          marginTop: 20,
-          padding: '10px 18px',
-          background: '#8b3a2a',
-          color: '#fdf8f4',
-          border: 'none',
-          borderRadius: 8,
-          cursor: 'pointer',
-          fontFamily: 'inherit',
-        }}
+        className="btn-logout"
         onClick={() => {
           localStorage.removeItem(USER_KEY)
           window.location.href = '/login'
@@ -41,8 +35,9 @@ function Home() {
       >
         Sair
       </button>
-      <p style={{ marginTop: 24 }}>
-        <Link to="/login" style={{ color: '#8b3a2a' }}>Ir para login</Link>
+
+      <p className="login-link-container">
+        <Link to="/login" className="login-link">Ir para login</Link>
       </p>
     </div>
   )
