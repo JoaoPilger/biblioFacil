@@ -1,0 +1,250 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&display=swap");
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f0e8df;
+  --card-bg: #ddd0c4;
+  --card-inner: #cfc0b0;
+  --border: #c5b09e;
+  --input-bg: #e8ddd3;
+  --input-border: #b8a898;
+  --text-dark: #4a3728;
+  --text-mid: #7a6555;
+  --text-light: #9e8b7b;
+  --accent: #694d40;
+  --accent-hover: #6e2d1f;
+  --accent-soft: #c27a60;
+  --white: #fdf8f4;
+  --shadow: 0 4px 20px rgba(74, 55, 40, 0.12);
+  --shadow-deep: 0 8px 32px rgba(74, 55, 40, 0.18);
+}
+
+.biblio-page {
+  min-height: 100vh;
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 20% 20%, rgba(194, 122, 96, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(139, 58, 42, 0.06) 0%, transparent 60%);
+  font-family: "Fraunces", serif;
+  display: flex;
+  flex-direction: column;
+}
+
+.biblio-nav {
+  background-color: var(--card-bg);
+  padding: 14px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(74, 55, 40, 0.08);
+}
+
+.biblio-logo {
+  font-family: "Fraunces", serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  letter-spacing: 0.01em;
+}
+
+.biblio-nav-links {
+  display: flex;
+  gap: 28px;
+}
+
+.biblio-nav-links a {
+  color: var(--text-mid);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  transition: color 0.2s;
+}
+
+.biblio-nav-links a:hover { color: var(--text-dark); }
+
+.biblio-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+}
+
+.login-card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  box-shadow: var(--shadow-deep);
+  width: 100%;
+  max-width: 420px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  animation: fadeUp 0.5s ease both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.login-header {
+  background: var(--card-inner);
+  border-bottom: 1px solid var(--border);
+  padding: 28px 32px 24px;
+  text-align: center;
+}
+
+.login-title {
+  font-family: "Fraunces", serif;
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+}
+
+.login-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-light);
+  font-weight: 300;
+  letter-spacing: 0.02em;
+}
+
+.login-body {
+  padding: 28px 32px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-mid);
+  letter-spacing: 0.04em;
+}
+
+.field-wrap { position: relative; }
+
+.field-input {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: "Fraunces", serif;
+  font-size: 0.88rem;
+  color: var(--text-dark);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.field-input::placeholder { color: var(--text-light); font-weight: 300; }
+
+.field-input:focus {
+  border-color: var(--accent-soft);
+  box-shadow: 0 0 0 3px rgba(194, 122, 96, 0.18);
+}
+
+.field-input.focused { border-color: var(--accent-soft); }
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-light);
+  font-size: 0.82rem;
+  padding: 2px 4px;
+  transition: color 0.2s;
+}
+
+.password-toggle:hover { color: var(--text-mid); }
+
+.forgot-link {
+  text-align: right;
+  margin-top: -8px;
+}
+
+.forgot-link a {
+  font-size: 0.75rem;
+  color: var(--accent-soft);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.forgot-link a:hover { color: var(--accent); }
+
+.btn-primary {
+  width: 100%;
+  background: var(--accent);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-family: "Fraunces", serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 3px 10px rgba(139, 58, 42, 0.25);
+  margin-top: 4px;
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 16px rgba(139, 58, 42, 0.3);
+}
+
+.btn-primary:active { transform: translateY(0); }
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-light);
+  font-size: 0.75rem;
+}
+
+.divider::before, .divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.register-prompt {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+
+.register-prompt a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.register-prompt a:hover { color: var(--accent-hover); }
+
+.form-error {
+  font-size: 0.8rem;
+  color: var(--accent);
+  padding: 10px 12px;
+  background: rgba(139, 58, 42, 0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(139, 58, 42, 0.2);
+}
