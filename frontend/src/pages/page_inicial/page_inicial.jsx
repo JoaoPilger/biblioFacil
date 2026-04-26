@@ -55,7 +55,7 @@ const SearchIcon = ({ size = 16 }) => (
 );
 
 // ── UI ────────────────────────────────────────────────
-function Navbar({ user }) {
+function Navbar({ user, onLogout }) {
   return (
     <nav className="navbar">
       <div className="navbar__logo">
@@ -70,12 +70,18 @@ function Navbar({ user }) {
           Quem somos
         </a>
         {user ? (
-          <div className="nav-avatar" role="button" tabIndex={0} aria-label="Perfil">
-            <UserIcon />
-          </div>
+          <>
+            <div className="nav-avatar" aria-label="Usuário logado">
+              <UserIcon />
+            </div>
+            <button type="button" className="nav-cta" onClick={onLogout}>
+              Sair
+            </button>
+          </>
         ) : (
           <Link to="/login" className="nav-cta">
-            Entrar
+            <UserIcon />
+            <span style={{ marginLeft: 8 }}>Entrar</span>
           </Link>
         )}
       </div>
@@ -240,7 +246,14 @@ export default function PageInicial() {
 
   return (
     <div className="app">
-      <Navbar user={user} />
+      <Navbar
+        user={user}
+        onLogout={() => {
+          localStorage.removeItem("biblioFacil_user");
+          localStorage.removeItem("biblioFacil_token");
+          window.location.href = "/";
+        }}
+      />
       <Hero />
 
       <main className="main">
