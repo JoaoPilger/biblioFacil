@@ -54,7 +54,7 @@ export default function Cadastro() {
     setStep(2);
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setSubmitError("");
     if (form.password.length < 8) {
@@ -74,7 +74,7 @@ export default function Cadastro() {
       setSubmitError("Tipo de usuário inválido.");
       return;
     }
-    var result = registerLocal({
+    var result = await registerLocal({
       nome: form.nome.trim(),
       email: form.email.trim(),
       password: form.password,
