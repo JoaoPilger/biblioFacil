@@ -1,0 +1,13 @@
+[
+  { "id": 1, "titulo": "A Ilha do Tesouro", "autor": "Robert Louis Stevenson", "genero": "Aventura", "capa": "/covers/default.svg" },
+  { "id": 2, "titulo": "Viagem ao Centro da Terra", "autor": "Jules Verne", "genero": "Aventura", "capa": "/covers/default.svg" },
+  { "id": 3, "titulo": "O Hobbit", "autor": "J. R. R. Tolkien", "genero": "Fantasy", "capa": "/covers/default.svg" },
+  { "id": 4, "titulo": "Duna", "autor": "Frank Herbert", "genero": "Ficção Científica", "capa": "/covers/default.svg" },
+  { "id": 5, "titulo": "Drácula", "autor": "Bram Stoker", "genero": "Terror", "capa": "/covers/default.svg" },
+  { "id": 6, "titulo": "O Assassinato no Expresso do Oriente", "autor": "Agatha Christie", "genero": "Mistério", "capa": "/covers/default.svg" },
+  { "id": 7, "titulo": "Dom Casmurro", "autor": "Machado de Assis", "genero": "Romance", "capa": "/covers/default.svg" },
+  { "id": 8, "titulo": "Sapiens", "autor": "Yuval Noah Harari", "genero": "História", "capa": "/covers/default.svg" },
+  { "id": 9, "titulo": "O Pequeno Príncipe", "autor": "Antoine de Saint-Exupéry", "genero": "Infantil", "capa": "/covers/default.svg" },
+  { "id": 10, "titulo": "O Poder do Hábito", "autor": "Charles Duhigg", "genero": "Autoajuda", "capa": "/covers/default.svg" }
+]
+
