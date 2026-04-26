@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  nome VARCHAR(120) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('leitor', 'bibliotecario')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

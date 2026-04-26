@@ -10,13 +10,16 @@ export default function Login() {
   const [focused, setFocused] = useState("");
   const [error, setError] = useState("");
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError("");
-    var result = loginLocal({ email: email.trim(), password });
+    var result = await loginLocal({ email: email.trim(), password });
     if (result.error) {
       setError(result.error);
       return;
+    }
+    if (result.token) {
+      localStorage.setItem("biblioFacil_token", result.token);
     }
     localStorage.setItem("biblioFacil_user", JSON.stringify(result.user));
     navigate("/", { replace: true });

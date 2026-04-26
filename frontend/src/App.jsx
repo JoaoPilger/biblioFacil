@@ -34,6 +34,7 @@ function Home() {
         }}
         onClick={() => {
           localStorage.removeItem(USER_KEY)
+          localStorage.removeItem('biblioFacil_token')
           window.location.href = '/login'
         }}
       >
