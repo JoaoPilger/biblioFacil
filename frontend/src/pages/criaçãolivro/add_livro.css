@@ -1,31 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Lato:wght@300;400;700&display=swap');
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-:root {
-  --bg: #e8ddd0;
-  --card-bg: #c4a882;
-  --card-inner: #b89567;
-  --input-bg: #d9c4a8;
-  --input-border: #a8876a;
-  --text-dark: #3d2b1a;
-  --text-muted: #7a5c3e;
-  --btn-bg: #6b4c30;
-  --btn-hover: #553c24;
-  --accent: #4a3520;
-  --nav-bg: #c9b49a;
-  --upload-border: #8c6840;
-  --shadow: 0 8px 32px rgba(60, 35, 10, 0.18);
-  --radius: 18px;
-  --radius-sm: 10px;
-}
-
 body {
-  font-family: 'Lato', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   background-color: var(--bg);
   color: var(--text-dark);
   min-height: 100vh;
@@ -278,7 +252,7 @@ body {
   border: none;
   border-radius: 8px;
   padding: 9px 20px;
-  font-family: 'Lato', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
@@ -301,7 +275,7 @@ body {
   border: none;
   border-radius: 50px;
   padding: 13px 48px;
-  font-family: 'Lato', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 0.92rem;
   font-weight: 700;
   cursor: pointer;

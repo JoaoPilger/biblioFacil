@@ -1,35 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&display=swap');
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-:root {
-  --bg: #f0e8df;
-  --card-bg: #ddd0c4;
-  --card-inner: #cfc0b0;
-  --border: #c5b09e;
-  --input-bg: #e8ddd3;
-  --input-border: #b8a898;
-  --text-dark: #4a3728;
-  --text-mid: #7a6555;
-  --text-light: #9e8b7b;
-  --accent: #694D40;
-  --accent-hover: #6e2d1f;
-  --accent-soft: #c27a60;
-  --white: #fdf8f4;
-  --shadow: 0 4px 20px rgba(74, 55, 40, 0.12);
-  --shadow-deep: 0 8px 32px rgba(74, 55, 40, 0.18);
-}
-
 .biblio-page {
   min-height: 100vh;
   background-color: var(--bg);
   background-image: radial-gradient(ellipse at 20% 20%, rgba(194, 122, 96, 0.08) 0%, transparent 60%),
     radial-gradient(ellipse at 80% 80%, rgba(139, 58, 42, 0.06) 0%, transparent 60%);
-  font-family: "Fraunces", serif;
+  font-family: "DM Sans", sans-serif;
   display: flex;
   flex-direction: column;
 }
@@ -45,7 +19,7 @@
 }
 
 .biblio-logo {
-  font-family: "Fraunces", serif;
+  font-family: "Playfair Display", serif;
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-dark);
@@ -108,7 +82,7 @@
 }
 
 .login-title {
-  font-family: "Fraunces", serif;
+  font-family: "Playfair Display", serif;
   font-size: 1.65rem;
   font-weight: 700;
   color: var(--text-dark);
@@ -152,7 +126,7 @@
   border: 1px solid var(--input-border);
   border-radius: 8px;
   padding: 10px 14px;
-  font-family: "Fraunces", serif;
+  font-family: "DM Sans", sans-serif;
   font-size: 0.88rem;
   color: var(--text-dark);
   outline: none;
@@ -214,7 +188,7 @@
   border: none;
   border-radius: 8px;
   padding: 12px;
-  font-family: "Fraunces", serif;
+  font-family: "DM Sans", sans-serif;
   font-size: 0.9rem;
   font-weight: 500;
   letter-spacing: 0.05em;
