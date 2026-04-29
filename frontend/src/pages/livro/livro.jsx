@@ -1,29 +1,9 @@
 import "./livro.css";
-
-// ── Icons ──────────────────────────────────────────────
-const BookIcon = ({ size = 24, color = "currentColor", strokeWidth = 2 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-  </svg>
-);
-
-const UserIcon = ({ size = 18 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
-  </svg>
-);
-
-const SearchIcon = ({ size = 16 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8" />
-    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </svg>
-);
+import { useState } from "react";
+import Header from "../../components/header/Header"
+import Footer from "../../components/footer/Footer"
+import { BookIcon, UserIcon, SearchIcon} from "../../components/Icons";
+import ReservaModal from "../../components/reserva/ReservaModal";
 
 // ── Components ─────────────────────────────────────────
 function Navbar() {
@@ -60,7 +40,7 @@ function SearchBar() {
   );
 }
 
-function BookHero({ title, author, status = "Disponível" }) {
+function BookHero({ title, author, status = "Disponível", onReserve, reserveDisabled }) {
   return (
     <div className="book-hero">
       <div className="book-hero__cover">
@@ -72,8 +52,8 @@ function BookHero({ title, author, status = "Disponível" }) {
           <span className="status-dot" />
           Status: {status}
         </div>
-        <button className="btn-schedule">
-          Agende aqui Retirada/Devolução
+        <button className="btn-schedule" type="button" onClick={onReserve} disabled={reserveDisabled}>
+          Reservar/Retirar
         </button>
       </div>
     </div>
@@ -89,53 +69,28 @@ function Sinopse({ text }) {
   );
 }
 
-function Footer() {
-  const columns = [
-    { heading: "Athom System", links: ["Produtos", "Quem Somos", "Log In"] },
-    { heading: "Social",       links: ["LinkedIn", "Instagram", "Contato"] },
-  ];
-
-  return (
-    <footer className="footer">
-      <div>
-        <div className="footer__brand">
-          <div className="footer__logo-icon">
-            <BookIcon size={22} color="#f5f0e8" />
-          </div>
-          <div className="footer__brand-name">
-            ATHOM<br />
-            <span className="footer__brand-sub">SYSTEM</span>
-          </div>
-        </div>
-        <p className="footer__copy">© 2024 Athom System. Todos os direitos reservados</p>
-      </div>
-      <div className="footer__links">
-        {columns.map(col => (
-          <div key={col.heading} className="footer__col">
-            <h4>{col.heading}</h4>
-            {col.links.map(link => (
-              <a key={link} href="#" className="footer-link">{link}</a>
-            ))}
-          </div>
-        ))}
-      </div>
-    </footer>
-  );
-}
-
 // ── Data ───────────────────────────────────────────────
 const BOOK = {
+  id: 1,
   title: "Titulo Livro",
+  titulo: "Titulo Livro",
   author: "Escritor",
+  autor: "Escritor",
   status: "Disponível",
   sinopse: `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus tincidunt sollicitudin lobortis. Duis in risus accumsan, aliquam lacus vitae, pellentesque ipsum. Praesent sodales ipsum non tortor vulputate euismod eu non quam. Ut maximus mollis ipsum, at tempor ligula tempor in. In ultricies posuere arcu id tristique. Nulla sit amet lorem tellus. Fusce non accumsan elit. Donec semper nec mauris at pharetra. Sed sit amet neque tellus. Duis sit amet accumsan ligula. Nam nibh nunc, vulputate sit amet consectetur eget, feugiat eget lectus.`,
 };
 
 // ── Page ───────────────────────────────────────────────
 export default function BiblioFacilDetail() {
+  const [reservaOpen, setReservaOpen] = useState(false);
+
+  const s = String(BOOK?.status || "").toLowerCase();
+  // Ajuste fino depois quando o backend definir status oficialmente.
+  const reserveDisabled = s.includes("reservado") || s.includes("indispon") || s.includes("emprest");
+
   return (
     <div className="app">
-      <Navbar />
+      <Header />
       <SearchBar />
 
       <main className="main">
@@ -143,11 +98,19 @@ export default function BiblioFacilDetail() {
           title={BOOK.title}
           author={BOOK.author}
           status={BOOK.status}
+          onReserve={() => setReservaOpen(true)}
+          reserveDisabled={reserveDisabled}
         />
         <Sinopse text={BOOK.sinopse} />
       </main>
 
       <Footer />
+
+      <ReservaModal
+        open={reservaOpen}
+        onClose={() => setReservaOpen(false)}
+        book={BOOK}
+      />
     </div>
   );
 }

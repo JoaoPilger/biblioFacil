@@ -1,0 +1,53 @@
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;700&display=swap");
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #f0ebe3;
+  --surface: #e8e0d4;
+  --card-bg: #ddd0c4;
+  --card-inner: #cfc0b0;
+  --border: #d4c8b8;
+  --input-bg: #e8ddd3;
+  --input-border: #b8a898;
+
+  --text-primary: #2c1f14;
+  --text-secondary: #7a6758;
+  --text-dark: #4a3728;
+  --text-mid: #7a6555;
+  --text-light: #9e8b7b;
+  --text-muted: #7a5c3e;
+
+  --brown-dark: #4a3728;
+  --brown-mid: #7a5c48;
+  --brown-btn: #5c3d2e;
+  --brown-btn-hover: #3e2a1f;
+  --btn-bg: #6b4c30;
+  --btn-hover: #553c24;
+  --accent: #694d40;
+  --accent-hover: #6e2d1f;
+  --accent-soft: #c27a60;
+  --green: #4a7a50;
+  --white: #fdf8f4;
+
+  --shadow: rgba(74, 55, 40, 0.12);
+  --shadow-deep: 0 8px 32px rgba(74, 55, 40, 0.18);
+  --upload-border: #8c6840;
+  --nav-bg: #c9b49a;
+  --radius: 18px;
+  --radius-sm: 10px;
+}
+
+body {
+  font-family: "DM Sans", sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.4;
+}

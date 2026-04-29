@@ -1,5 +1,7 @@
 import { useState, useRef } from "react";
 import "./add_livro.css";
+import Header from "../../components/header/Header"
+import Footer from "../../components/footer/Footer"
 
 const GENRES = [
   "Romance",
@@ -53,6 +55,7 @@ export default function AdicionarLivro() {
     genero: "",
     paginas: "",
     sinopse: "",
+    isbn: "",
   });
   const [genreOpen, setGenreOpen] = useState(false);
   const [coverPreview, setCoverPreview] = useState(null);
@@ -80,7 +83,7 @@ export default function AdicionarLivro() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    
+
     if (!form.titulo || !form.autor) {
       alert("Por favor, preencha pelo menos título e autor!");
       return;
@@ -89,26 +92,26 @@ export default function AdicionarLivro() {
     try {
       const bookData = {
         ...form,
-        capa: coverPreview
+        capa: coverPreview,
       };
 
       const response = await fetch("http://localhost:3000/api/books", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(bookData)
+        body: JSON.stringify(bookData),
       });
 
       if (!response.ok) {
-        throw new Error("Erro ao salvar livro");
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.details || errData.error || "Erro ao salvar livro");
       }
 
       const result = await response.json();
       console.log("Livro salvo:", result);
       alert("Livro salvo com sucesso! 📚");
-      
-      // Limpar formulário
+
       setForm({
         titulo: "",
         autor: "",
@@ -117,7 +120,8 @@ export default function AdicionarLivro() {
         editora: "",
         genero: "",
         paginas: "",
-        sinopse: ""
+        sinopse: "",
+        isbn: "",
       });
       setCoverPreview(null);
     } catch (error) {
@@ -128,16 +132,8 @@ export default function AdicionarLivro() {
 
   return (
     <div className="bibliofacil-app">
-      {/* NAVBAR */}
-      <nav className="navbar">
-        <span className="navbar-logo">BiblioFácil</span>
-        <div className="navbar-right">
-          <a href="#" className="navbar-link">Quem somos</a>
-          <div className="navbar-icon">
-            <UserIcon />
-          </div>
-        </div>
-      </nav>
+
+      <Header></Header>
 
       {/* PAGE */}
       <div className="page-wrapper">
@@ -260,6 +256,20 @@ export default function AdicionarLivro() {
                 </div>
               </div>
 
+              {/* ISBN */}
+              <div className="form-group">
+                <label className="form-label">ISBN:</label>
+                <input
+                  className="form-input"
+                  type="text"
+                  name="isbn"
+                  placeholder="Ex: 978-85-359-0277-5"
+                  value={form.isbn}
+                  onChange={handleChange}
+                  maxLength={17}
+                />
+              </div>
+
               {/* Sinopse */}
               <div className="form-group">
                 <label className="form-label">Sinopse:</label>
@@ -329,6 +339,7 @@ export default function AdicionarLivro() {
           </button>
         </div>
       </div>
+      <Footer></Footer>
     </div>
   );
 }
