@@ -6,6 +6,8 @@ import Footer from "../../components/footer/Footer";
 import { BookIcon, UserIcon} from "../../components/Icons";
 import SearchBar from "../../components/searchBar/SearchBar";
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+
 
 function Hero() {
   return (

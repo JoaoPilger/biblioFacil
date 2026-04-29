@@ -27,16 +27,35 @@ function parseOptionalYearToDate(value) {
 
 // buscar todos os livros
 const getBooks = async (req, res) => {
-    try {
-        const result = await db.query(
-            "SELECT id, titulo, autor, genero, status FROM livros ORDER BY created_at DESC"
-        )
-        res.json(result.rows);
+    const { genero, limit } = req.query;
+    const params = [];
+    let query = "SELECT id, titulo, autor, genero, status, capa_url FROM livros";
 
-    } catch (error) {
-        res.status(500).json({error: "Erro ao buscar livros."});
+    if (genero) {
+        params.push(genero);
+        query += ` WHERE genero = $${params.length}`;
     }
-}
+
+    if (search) {
+        params.push(`%${search}%`);
+        query += ` WHERE titulo ILIKE $${params.length} OR autor ILIKE $${params.length}`;
+    }
+
+    query += " ORDER BY created_at DESC";
+
+    if (limit) {
+        params.push(parseInt(limit));
+        query += ` LIMIT $${params.length}`;
+    }
+
+    try {
+        const result = await db.query(query, params);
+        res.json({ items: result.rows }); // 👈 retorna { items: [...] }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Erro ao buscar livros." });
+    }
+};
 
 // get livro por id
 const getBookId = async (req, res) => {
