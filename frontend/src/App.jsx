@@ -16,7 +16,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/cadastro" element={<Cadastro />} />
         <Route path="/adicionar-livro" element={<AdicionarLivro />} />
-        <Route path="/editar-livro/:id" element={<EditarLivro />} />
+        <Route path="/editar/:id" element={<EditarLivro />} />
         <Route path="/resultado_busca" element={<Resultado />}/>
         <Route path="/livro/:id" element={<Livro />}/>
         <Route path="*" element={<Navigate to="/" replace />} />

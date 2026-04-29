@@ -49,16 +49,17 @@ export default function AdicionarLivro() {
   const [form, setForm] = useState({
     titulo: "",
     autor: "",
-    ano: "",
+    ano_publ: "",
     edicao: "",
     editora: "",
     genero: "",
+    isbn: "",
     paginas: "",
     sinopse: "",
-    isbn: "",
   });
   const [genreOpen, setGenreOpen] = useState(false);
   const [coverPreview, setCoverPreview] = useState(null);
+  const [coverFile, setCoverFile] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleChange = (e) => {
@@ -72,6 +73,12 @@ export default function AdicionarLivro() {
 
   const handleCoverChange = (e) => {
     const file = e.target.files[0];
+
+    if (file) {
+      setCoverFile(file); // Guarda o arquivo para o upload
+      setCoverPreview(URL.createObjectURL(file)); // Gera a URL temporária para o preview
+    }
+
     if (!file) return;
     const url = URL.createObjectURL(file);
     setCoverPreview(url);
@@ -84,23 +91,25 @@ export default function AdicionarLivro() {
   const handleSave = async (e) => {
     e.preventDefault();
 
-    if (!form.titulo || !form.autor) {
-      alert("Por favor, preencha pelo menos título e autor!");
+    if (!form.titulo || !form.autor || !form.isbn) {
+      alert("Por favor, preencha pelo menos título, autor e isbn!");
       return;
     }
 
     try {
-      const bookData = {
-        ...form,
-        capa: coverPreview,
-      };
+      const formData = new FormData();
 
-      const response = await fetch("http://localhost:3000/api/books", {
+      Object.keys(form).forEach(key => {
+        formData.append(key, form[key]);
+      });
+      
+      if (coverFile) { 
+        formData.append('capa', coverFile);
+      }
+
+      const response = await fetch("http://localhost:3000/livros/cadastrar", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(bookData),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -115,7 +124,7 @@ export default function AdicionarLivro() {
       setForm({
         titulo: "",
         autor: "",
-        ano: "",
+        ano_publ: "",
         edicao: "",
         editora: "",
         genero: "",
@@ -123,6 +132,7 @@ export default function AdicionarLivro() {
         sinopse: "",
         isbn: "",
       });
+
       setCoverPreview(null);
     } catch (error) {
       console.error("Erro:", error);
@@ -181,9 +191,9 @@ export default function AdicionarLivro() {
                   <input
                     className="form-input"
                     type="text"
-                    name="ano"
+                    name="ano_publ"
                     placeholder="Ex: 1998"
-                    value={form.ano}
+                    value={form.ano_publ}
                     onChange={handleChange}
                   />
                 </div>
