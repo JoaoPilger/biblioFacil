@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./edit_livro.css";
+import Header from "../../components/header/Header"
+import Footer from "../../components/footer/Footer"
 
 const GENRES = [
   "Romance",
@@ -184,14 +186,8 @@ export default function EditarLivro() {
 
   return (
     <div className="bibliofacil-app">
-      {/* NAVBAR */}
-      <nav className="navbar">
-        <span className="navbar-logo">BiblioFácil</span>
-        <div className="navbar-links">
-          <a href="#" className="navbar-link">Quem somos</a>
-          <a href="#" className="navbar-link">Contato</a>
-        </div>
-      </nav>
+
+      <Header/>
 
       {/* PAGE */}
       <div className="page-wrapper">
@@ -409,6 +405,7 @@ export default function EditarLivro() {
           </button>
         </div>
       </div>
+      <Footer></Footer>
     </div>
   );
 }

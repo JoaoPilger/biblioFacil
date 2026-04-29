@@ -2,6 +2,10 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { loginLocal } from "../../localAuth";
 import "./Login.css";
+import {useAuth} from "../../context/authContext"
+import Header from "../../components/header/Header"
+import Footer from "../../components/footer/Footer"
+
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -9,33 +13,28 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [focused, setFocused] = useState("");
   const [error, setError] = useState("");
+  
+  const {login} = useAuth();
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+
     var result = await loginLocal({ email: email.trim(), password });
+
     if (result.error) {
       setError(result.error);
       return;
     }
-    localStorage.setItem("biblioFacil_user", JSON.stringify(result.user));
-    if (result.token) {
-      localStorage.setItem("biblioFacil_token", result.token);
-    }
+
+    login(result.user, result.token);
+    
     navigate("/", { replace: true });
   }
 
   return (
     <div className="biblio-page">
-      <nav className="biblio-nav">
-        <Link to="/" className="biblio-logo" style={{ textDecoration: "none", color: "inherit" }}>
-          BiblioFácil
-        </Link>
-        <div className="biblio-nav-links">
-          <a href="#">Quem somos</a>
-          <a href="#">Contato</a>
-        </div>
-      </nav>
+      <Header></Header>
 
       <main className="biblio-main">
         <div className="login-card">
@@ -111,6 +110,7 @@ export default function Login() {
           </form>
         </div>
       </main>
+      <Footer></Footer>
     </div>
   );
 }

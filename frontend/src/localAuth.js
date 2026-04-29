@@ -1,32 +1,31 @@
-import axios from "axios";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+import api from "./services/api";
 
 export async function registerLocal(payload) {
   try {
-    const response = await axios.post(`${API_BASE_URL}/users/cadastro`, payload);
+    const response = await api.post("/users/cadastro", payload);
     return { user: response.data.user };
   } catch (error) {
-    return {
-      error:
-        error?.response?.data?.error ||
-        "Nao foi possivel cadastrar. Tente novamente.",
-    };
+    return { error: error?.response?.data?.error || "Erro no cadastro." };
   }
 }
 
 export async function loginLocal(payload) {
   try {
-    const response = await axios.post(`${API_BASE_URL}/users/login`, payload);
+    const response = await api.post("/users/login", payload);
     return {
       user: response.data.user,
       token: response.data.token,
     };
   } catch (error) {
-    return {
-      error:
-        error?.response?.data?.error ||
-        "Nao foi possivel realizar login. Tente novamente.",
-    };
+    return { error: error?.response?.data?.error || "Erro no login." };
+  }
+}
+
+export async function validateToken() {
+  try {
+    const response = await api.get("/users/me");
+    return response.data;
+  } catch (error) {
+    return { error: "Token inválido" };
   }
 }

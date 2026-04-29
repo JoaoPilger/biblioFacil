@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { registerLocal } from "../../localAuth";
 import "./Cadastro.css";
+import Header from "../../components/header/Header"
+import Footer from "../../components/footer/Footer"
 
 const TIPO_API = {
   Leitor: "leitor",
@@ -90,15 +92,7 @@ export default function Cadastro() {
 
   return (
     <div className="biblio-page">
-      <nav className="biblio-nav">
-        <Link to="/" className="biblio-logo" style={{ textDecoration: "none", color: "inherit" }}>
-          BiblioFácil
-        </Link>
-        <div className="biblio-nav-links">
-          <a href="#">Quem somos</a>
-          <a href="#">Contato</a>
-        </div>
-      </nav>
+      <Header></Header>
 
       <main className="biblio-main">
         <div className="cad-card">
@@ -331,6 +325,7 @@ export default function Cadastro() {
           </div>
         </div>
       </main>
+      <Footer></Footer>
     </div>
   );
 }

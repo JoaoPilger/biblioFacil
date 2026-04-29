@@ -4,8 +4,8 @@ import Cadastro from './pages/login_cadastro/cadastro'
 import PageInicial from './pages/page_inicial/page_inicial'
 import AdicionarLivro from './pages/adicionar_livro/add_livro'
 import EditarLivro from './pages/editar_livro/edit_livro'
-import Resultado from './pages/resultado_busca'
-import Livro from './pages/livro'
+import Resultado from './pages/resultado_busca/resultado_busca'
+import Livro from './pages/livro/livro'
 import './App.css'
 
 function App() {

@@ -1,5 +1,7 @@
 import { useState, useRef } from "react";
 import "./add_livro.css";
+import Header from "../../components/header/Header"
+import Footer from "../../components/footer/Footer"
 
 const GENRES = [
   "Romance",
@@ -130,16 +132,8 @@ export default function AdicionarLivro() {
 
   return (
     <div className="bibliofacil-app">
-      {/* NAVBAR */}
-      <nav className="navbar">
-        <span className="navbar-logo">BiblioFácil</span>
-        <div className="navbar-right">
-          <a href="#" className="navbar-link">Quem somos</a>
-          <div className="navbar-icon">
-            <UserIcon />
-          </div>
-        </div>
-      </nav>
+
+      <Header></Header>
 
       {/* PAGE */}
       <div className="page-wrapper">
@@ -345,6 +339,7 @@ export default function AdicionarLivro() {
           </button>
         </div>
       </div>
+      <Footer></Footer>
     </div>
   );
 }
