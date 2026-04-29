@@ -1,14 +1,95 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import Footer from "./components/Footer";
-import Hero from "./components/Hero";
-import Navbar from "./components/Navbar";
-import SearchBar from "./components/SearchBar";
-import Shelf from "./components/Shelf";
+import { Link, useNavigate } from "react-router-dom";
+import Footer from "../../components/footer/Footer";
+import Header from "../../components/header/Header";
+import SearchBar from "../../components/searchBar/SearchBar";
 import "./page_inicial.css";
 
 const USER_KEY = "biblioFacil_user";
 const API_BASE = "http://localhost:3000";
+
+function Hero({ user, totalBooks, loading }) {
+  return (
+    <section className="hero" aria-label="Destaque">
+      <div className="hero__content">
+        <span className="hero__eyebrow">Biblioteca digital</span>
+        <h1 className="hero__title">Seu acervo literário mais organizado e inspirador.</h1>
+        <p className="hero__subtitle">
+          Encontre livros, explore gêneros e acompanhe os títulos favoritos com uma experiência leve e moderna.
+        </p>
+        <div className="hero__actions">
+          <Link to="/" className="hero__btn hero__btn--primary">
+            Explorar livros
+          </Link>
+          <Link to={user ? "/adicionar-livro" : "/login"} className="hero__btn hero__btn--secondary">
+            {user ? "Adicionar livro" : "Faça login"}
+          </Link>
+        </div>
+        <div className="hero__stats">
+          <div className="hero__stat-card">
+            <strong>{loading ? "..." : totalBooks || 0}</strong>
+            <span>livros presentes</span>
+          </div>
+          <div className="hero__stat-card">
+            <strong>35</strong>
+            <span>gêneros disponíveis</span>
+          </div>
+          <div className="hero__stat-card">
+            <strong>9/10</strong>
+            <span>avaliação média</span>
+          </div>
+        </div>
+      </div>
+      <div className="hero__accent" />
+    </section>
+  );
+}
+
+function BookTile({ loading = false }) {
+  return (
+    <div className={`tile ${loading ? "tile--loading" : ""}`}>
+      <div className="tile__cover" aria-hidden="true" />
+      <div className="tile__meta">
+        <div className="tile__line" />
+        <div className="tile__line tile__line--sm" />
+      </div>
+    </div>
+  );
+}
+
+function BookTileData({ book, loading = false }) {
+  if (!book) return <BookTile loading={loading} />;
+  const coverSrc = API_BASE + (book.capa || "/covers/default.svg");
+
+  return (
+    <Link to={`/editar-livro/${book.id}`} className="tile tile--data tile--link">
+      <div className="tile__cover tile__cover--data">
+        <img className="tile__img" src={coverSrc} alt={`Capa de ${book.titulo}`} loading="lazy" />
+      </div>
+      <div className="tile__meta tile__meta--data">
+        <div className="tile__title" title={book.titulo}>
+          {book.titulo}
+        </div>
+        <div className="tile__author" title={book.autor}>
+          {book.autor}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function Shelf({ title, items = 6, books, loading = false }) {
+  return (
+    <section className="shelf">
+      <h2 className="shelf__title">{title}</h2>
+      <div className="shelf__grid">
+        {Array.from({ length: items }).map((_, i) => (
+          <BookTileData key={i} book={books && books[i] ? books[i] : null} loading={loading} />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export default function PageInicial() {
   const navigate = useNavigate();
@@ -81,14 +162,7 @@ export default function PageInicial() {
 
   return (
     <div className="app">
-      <Navbar
-        user={user}
-        onLogout={() => {
-          localStorage.removeItem("biblioFacil_user");
-          localStorage.removeItem("biblioFacil_token");
-          window.location.href = "/";
-        }}
-      />
+      <Header />
       <Hero user={user} totalBooks={totalBooks} loading={loading} />
 
       <main className="main">
