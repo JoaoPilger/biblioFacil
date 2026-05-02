@@ -27,7 +27,7 @@ export default function Login() {
       return;
     }
 
-    login(result.user, result.token);
+    login(result.user);
     
     navigate("/", { replace: true });
   }

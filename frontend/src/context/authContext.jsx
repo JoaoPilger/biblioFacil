@@ -10,38 +10,24 @@ export function AuthProvider({ children }) {
   // Esta função corre assim que o site abre
   useEffect(() => {
     async function checkLogin() {
-      const storageUser = localStorage.getItem("biblioFacil_user");
-      const storageToken = localStorage.getItem("biblioFacil_token");
-
-      if (storageUser && storageToken) {
-        // 1. Configura o token no axios para as próximas chamadas
-        api.defaults.headers.Authorization = `Bearer ${storageToken}`;
-        
-        try {
-          // 2. Chama a rota /me que criaste no backend para validar o token
-          const response = await api.get('/users/me');
-          setUser(response.data.user);
-        } catch (error) {
-          // Se o token for inválido/expirado, o backend responde 403 e limpamos tudo
-          logout();
-        }
+      try {
+        const response = await api.get('/users/me');
+        setUser(response.data.user || null);
+      } catch {
+        setUser(null);
       }
       setLoading(false);
     }
     checkLogin();
   }, []);
 
-  const login = (userData, token) => {
-    localStorage.setItem("biblioFacil_user", JSON.stringify(userData));
-    localStorage.setItem("biblioFacil_token", token);
-    api.defaults.headers.Authorization = `Bearer ${token}`;
-    setUser(userData);
+  const login = (userData) => {
+    // Sessão é criada no backend e armazenada em cookie HttpOnly.
+    setUser(userData || null);
   };
 
   const logout = () => {
-    localStorage.removeItem("biblioFacil_user");
-    localStorage.removeItem("biblioFacil_token");
-    api.defaults.headers.Authorization = null;
+    api.post("/auth/logout").catch(() => {});
     setUser(null);
   };
   return (

@@ -86,7 +86,6 @@ export default function Cadastro() {
       setSubmitError(result.error);
       return;
     }
-    localStorage.setItem("biblioFacil_user", JSON.stringify(result.user));
     navigate("/", { replace: true });
   }
 

@@ -10,11 +10,12 @@ router.get('/', function(req, res, next) {
 
 router.post('/cadastro', userController.registerUser);
 router.post('/login', userController.authenticateUser);
+router.post('/logout', authenticateToken, userController.logoutUser);
 
 router.get('/me', authenticateToken, (req, res) => {
   try {
     res.json({
-      user: req.user 
+      user: req.user,
     });
   } catch (error) {
     res.status(500).json({ error: "Erro ao buscar dados do usuário." });

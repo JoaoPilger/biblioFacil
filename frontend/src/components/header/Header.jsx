@@ -1,9 +1,12 @@
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/authContext";
 import { Link } from "react-router-dom";
 import { BookIcon, UserIcon } from "../Icons";
 
 export default function Header() {
   const { user, logout, authenticated } = useAuth();
+  const onLogout = () => {
+    logout();
+  };
 
   return (
     <nav className="navbar">

@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 const bookControler = require('../controllers/bookController');
+const authenticateToken = require('../middlewares/auth');
 
 const multer = require('multer');
 const path = require('path');
@@ -19,6 +20,9 @@ const upload = multer({ storage });
 // ROTAS COMUNS
 // get geral
 router.get('/', bookControler.getBooks);
+
+// reserva (antes de /:id só para deixar explícito; POST não conflita com GET /:id)
+router.post('/:id/reservar', authenticateToken, bookControler.reserveBook);
 
 // get específico
 router.get('/:id', bookControler.getBookId);
