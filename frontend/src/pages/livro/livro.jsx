@@ -1,50 +1,24 @@
 import "./livro.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import Header from "../../components/header/Header"
 import Footer from "../../components/footer/Footer"
-import { BookIcon, UserIcon, SearchIcon} from "../../components/Icons";
+import SearchBar from "../../components/searchBar/SearchBar";
 import ReservaModal from "../../components/reserva/ReservaModal";
+import useBookSearchNavigation from "../../hooks/useBookSearchNavigation";
+import { useAuth } from "../../context/authContext";
 
-// ── Components ─────────────────────────────────────────
-function Navbar() {
-  return (
-    <nav className="navbar">
-      <div className="navbar__logo">
-        <div className="navbar__logo-icon">
-          <BookIcon size={22} color="#f5f0e8" />
-        </div>
-        <span className="navbar__title">BiblioFácil</span>
-      </div>
-      <div className="navbar__right">
-        <a href="#" className="nav-link">Quem somos</a>
-        <div className="nav-avatar">
-          <UserIcon />
-        </div>
-      </div>
-    </nav>
-  );
-}
+const API_BASE = "http://localhost:3000/";
 
-function SearchBar() {
-  return (
-    <div className="search-wrap">
-      <span className="search-wrap__icon">
-        <SearchIcon />
-      </span>
-      <input
-        className="search-input"
-        type="text"
-        placeholder="Pesquise por livros, gêneros..."
-      />
-    </div>
-  );
-}
+function BookHero({ title, author, capa_url, status = "Disponível", onReserve, reserveDisabled }) {
+  const capa_url_completa = capa_url
+  ? `${API_BASE}${capa_url.replace("/public", "")}`
+  : `${API_BASE}/covers/default.svg`;
 
-function BookHero({ title, author, status = "Disponível", onReserve, reserveDisabled }) {
   return (
     <div className="book-hero">
       <div className="book-hero__cover">
-        <BookIcon size={48} color="#7a5c48" strokeWidth={1.2} />
+        <img className="book-hero__cover" src={capa_url_completa} alt="" />
       </div>
       <div className="book-hero__info">
         <h1 className="book-hero__title">{title} - {author}</h1>
@@ -69,45 +43,80 @@ function Sinopse({ text }) {
   );
 }
 
-// ── Data ───────────────────────────────────────────────
-const BOOK = {
-  id: 1,
-  title: "Titulo Livro",
-  author: "Escritor",
-  status: "Disponível",
-  sinopse: `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus tincidunt sollicitudin lobortis. Duis in risus accumsan, aliquam lacus vitae, pellentesque ipsum. Praesent sodales ipsum non tortor vulputate euismod eu non quam. Ut maximus mollis ipsum, at tempor ligula tempor in. In ultricies posuere arcu id tristique. Nulla sit amet lorem tellus. Fusce non accumsan elit. Donec semper nec mauris at pharetra. Sed sit amet neque tellus. Duis sit amet accumsan ligula. Nam nibh nunc, vulputate sit amet consectetur eget, feugiat eget lectus.`,
-};
-
 // ── Page ───────────────────────────────────────────────
 export default function BiblioFacilDetail() {
+  const { id } = useParams();
+  const { search } = useBookSearchNavigation();
+  const { authenticated, loading: authLoading } = useAuth();
+  const [query, setQuery] = useState("");
+  const [book, setBook] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [reservaOpen, setReservaOpen] = useState(false);
 
-  const s = String(BOOK?.status || "").toLowerCase();
-  // Ajuste fino depois quando o backend definir status oficialmente.
-  const reserveDisabled = s.includes("reservado") || s.includes("indispon") || s.includes("emprest");
+  useEffect(() => {
+    const fetchBook = async () => {
+      try {
+        setLoading(true);
+        // Faz a chamada para a rota definida no controller
+        const response = await fetch(`http://localhost:3000/livros/${id}`);
+        
+        if (!response.ok) {
+          throw new Error("Livro não encontrado");
+        }
+
+        const data = await response.json();
+        console.log(data);
+        
+        setBook(data);
+      } catch (error) {
+        console.error("Erro ao carregar livro:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) fetchBook();
+  }, [id]);
+
+  // Lógica de desabilitar botão baseada no status vindo do banco (init.sql)
+  const s = String(book?.status || "").toLowerCase();
+  const reserveDisabled = authLoading || !authenticated || s !== "disponivel";
+
+  if (loading) return <div>Carregando...</div>;
+  if (!book) return <div>Livro não encontrado.</div>;
 
   return (
     <div className="app">
       <Header />
-      <SearchBar />
+      <SearchBar value={query} onChange={setQuery} onSearch={() => search(query)} />
 
       <main className="main">
         <BookHero
-          title={BOOK.title}
-          author={BOOK.author}
-          status={BOOK.status}
+          title={book.titulo} // Usando 'titulo' conforme definido no init.sql
+          author={book.autor}
+          capa_url={book.capa_url} // Usando 'autor' conforme definido no init.sql
+          status={book.status}
           onReserve={() => setReservaOpen(true)}
           reserveDisabled={reserveDisabled}
         />
-        <Sinopse text={BOOK.sinopse} />
+        <Sinopse text={book.sinopse} />
+        <div className="book-details-extra" style={{ padding: '0 20px', fontSize: '0.9rem' }}>
+          <p><strong>Editora:</strong> {book.editora}</p>
+          <p><strong>Ano:</strong> {book.ano_publ}</p>
+          <p><strong>Gênero:</strong> {book.genero}</p>
+        </div>
       </main>
 
       <Footer />
 
       <ReservaModal
         open={reservaOpen}
-        onClose={() => setReservaOpen(false)}
-        book={BOOK}
+        onClose={() => {
+          setReservaOpen(false);
+          // atualização otimista: se reservou, status já muda sem recarregar
+          setBook((b) => (b ? { ...b, status: "reservado" } : b));
+        }}
+        book={book}
       />
     </div>
   );

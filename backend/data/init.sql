@@ -39,3 +39,35 @@ CREATE TABLE IF NOT EXISTS emprestimos (
 -- Criar alguns índices para buscas rápidas (Performance)
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_livros_titulo ON livros(titulo);
+
+-- 4. RESERVAS (pedido de retirada / período reservado)
+CREATE TABLE IF NOT EXISTS reservas (
+    id SERIAL PRIMARY KEY,
+    livro_id INTEGER NOT NULL REFERENCES livros(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    nome VARCHAR(120) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    data_retirada DATE NOT NULL,
+    data_limite DATE NOT NULL,
+    observacoes TEXT,
+    status VARCHAR(20) DEFAULT 'pendente' CHECK (status IN ('pendente', 'confirmada', 'cancelada')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_reservas_livro ON reservas(livro_id);
+CREATE INDEX IF NOT EXISTS idx_reservas_user ON reservas(user_id);
+
+-- 5. SESSÕES (token/sessão armazenado no banco; removido ao deslogar)
+CREATE TABLE IF NOT EXISTS auth_sessions (
+    id UUID PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash VARCHAR(64) NOT NULL UNIQUE,
+    user_nome VARCHAR(120) NOT NULL,
+    user_email VARCHAR(255) NOT NULL,
+    user_tipo VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_expires ON auth_sessions(expires_at);

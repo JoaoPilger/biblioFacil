@@ -1,12 +1,15 @@
 import api from "./api";
 
 export async function createReserva(payload) {
-  // Backend esperado (a preparar):
-  // POST /reservas
-  // body: { bookId, userId, nome, email, retirada, limite, observacoes }
+  const { bookId, ...body } = payload || {};
+  if (bookId == null || String(bookId).trim() === "") {
+    const e = new Error("Livro não informado.");
+    throw e;
+  }
   try {
-    const response = await api.post("/reservas", payload);
+    const response = await api.post(`/livros/${bookId}/reservar`, body);
     return response.data;
+    
   } catch (error) {
     const msg =
       error?.response?.data?.error ||

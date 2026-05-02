@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./resultado_busca.css";
 import Header from "../../components/header/Header";
 import Footer from "../../components/footer/Footer";
-import { BookIcon, UserIcon} from "../../components/Icons";
+import { BookIcon } from "../../components/Icons";
 import SearchBar from "../../components/searchBar/SearchBar";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 
 const FilterIcon = ({ size = 14 }) => (
@@ -27,63 +28,114 @@ function Toolbar({ count }) {
 }
 
 function BookCover() {
-  return (
-    <div className="book-cover">
-      <BookIcon size={32} color="#7a5c48" strokeWidth={1.5} />
-    </div>
-  );
+  return null;
 }
 
-function BookCard({ title, author, status = "Disponível", index }) {
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+
+function BookCard({ id, titulo, autor, status = "disponivel", capa_url, index, onOpen }) {
+  const coverSrc = capa_url ? `${API_BASE}${capa_url}` : null;
+  const statusLabel = useMemo(() => {
+    if (!status) return "Disponível";
+    const s = String(status).toLowerCase();
+    if (s === "disponivel") return "Disponível";
+    if (s === "reservado") return "Reservado";
+    if (s === "emprestado") return "Emprestado";
+    return status;
+  }, [status]);
+
   return (
     <div className={`book-card book-card--anim-${Math.min(index, 2)}`}>
-      <BookCover />
+      <div className="book-cover">
+        {coverSrc ? (
+          <img
+            src={coverSrc}
+            alt={`Capa de ${titulo}`}
+            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
+            loading="lazy"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        ) : (
+          <BookIcon size={32} color="#7a5c48" strokeWidth={1.5} />
+        )}
+      </div>
       <div className="book-info">
         <div className="book-info__title">
-          {title} — {author}
+          {titulo} — {autor}
         </div>
         <div className="book-info__status">
           <span className="status-dot" />
-          Status: {status}
+          Status: {statusLabel}
         </div>
-        <button className="btn-saiba">Saiba Mais</button>
+        <button className="btn-saiba" onClick={() => onOpen(id)}>
+          Saiba Mais
+        </button>
       </div>
     </div>
   );
 }
 
-// ── Data ───────────────────────────────────────────────
-const BOOKS = [
-  { id: 1, title: "Titulo Livro", author: "Escritor", status: "Disponível" },
-  { id: 2, title: "Titulo Livro", author: "Escritor", status: "Disponível" },
-  { id: 3, title: "Titulo Livro", author: "Escritor", status: "Disponível" },
-];
-
 // ── App ────────────────────────────────────────────────
 export default function BiblioFacil() {
-  const [query, setQuery] = useState("");
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialQuery = searchParams.get("q") ?? searchParams.get("search") ?? "";
+  const [query, setQuery] = useState(initialQuery);
+  const [books, setBooks] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const filtered = BOOKS.filter(b =>
-    `${b.title} ${b.author}`.toLowerCase().includes(query.toLowerCase())
-  );
+  const effectiveQuery = useMemo(() => {
+    return (searchParams.get("q") ?? searchParams.get("search") ?? "").trim();
+  }, [searchParams]);
+
+  const handleSearch = (rawTerm) => {
+    const term = (rawTerm ?? query).trim();
+    if (!term) {
+      setSearchParams({});
+      return;
+    }
+    setSearchParams({ q: term });
+  };
+
+  const openBook = (id) => {
+    navigate(`/livro/${id}`);
+  };
+
+  useEffect(() => {
+    setQuery(effectiveQuery);
+  }, [effectiveQuery]);
 
   return (
     <div className="app">
       <Header />
 
       <main className="main">
-        <SearchBar value={query} onChange={setQuery} />
-        <Toolbar count={filtered.length} />
+        <SearchBar
+          value={query}
+          onChange={setQuery}
+          onSearch={handleSearch}
+          fetchBooks
+          autoFetch
+          onResults={(items) => setBooks(items)}
+          onLoadingChange={setLoading}
+          onError={(msg) => setError(msg)}
+        />
+        <Toolbar count={loading ? null : books.length} />
 
         <div className="results-list">
-          {filtered.length > 0
-            ? filtered.map((book, i) => (
-                <BookCard key={book.id} {...book} index={i} />
+          {error ? <p className="results-list__empty">{error}</p> : null}
+          {!error && loading ? <p className="results-list__empty">Carregando...</p> : null}
+          {!error && !loading && books.length > 0
+            ? books.map((book, i) => (
+                <BookCard key={book.id} {...book} index={i} onOpen={openBook} />
               ))
-            : (
-              <p className="results-list__empty">Nenhum livro encontrado.</p>
-            )
-          }
+            : null}
+          {!error && !loading && books.length === 0 ? (
+            <p className="results-list__empty">Nenhum livro encontrado.</p>
+          ) : null}
         </div>
       </main>
 

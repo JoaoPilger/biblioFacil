@@ -79,21 +79,33 @@ function CoverIcon() {
   );
 }
 
+function buildCoverPreviewUrl(baseUrl, coverPath) {
+  if (!coverPath) return null;
+  if (/^https?:\/\//i.test(coverPath)) return coverPath;
+
+  // Compatibiliza valores antigos salvos como "/public/covers/..."
+  const normalizedPath = coverPath.replace(/^\/public\//, "/");
+  return `${baseUrl}${normalizedPath}`;
+}
+
 export default function EditarLivro() {
+  const API_BASE_URL = "http://localhost:3000";
   const { id } = useParams();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     titulo: "",
     autor: "",
-    ano: "",
+    ano_publ: "",
     edicao: "",
     editora: "",
     genero: "",
     paginas: "",
     sinopse: "",
+    id: ""
   });
   const [genreOpen, setGenreOpen] = useState(false);
   const [coverPreview, setCoverPreview] = useState(null);
+  const [coverFile, setCoverFile] = useState(null);
   const [status, setStatus] = useState("reservado");
   const fileInputRef = useRef(null);
 
@@ -101,21 +113,27 @@ export default function EditarLivro() {
   useEffect(() => {
     const fetchBook = async () => {
       try {
-        const response = await fetch(`http://localhost:3000/api/books/${id}`);
+        console.log(id);
+        const response = await fetch(`${API_BASE_URL}/livros/${id}`);
+        
         if (!response.ok) throw new Error("Livro não encontrado");
         const data = await response.json();
-        const book = data.item;
+        const book = data;
         setForm({
           titulo: book.titulo || "",
           autor: book.autor || "",
-          ano: book.ano || "",
+          ano_publ: book.ano_publ || "",
           edicao: book.edicao || "",
           editora: book.editora || "",
           genero: book.genero || "",
           paginas: book.paginas || "",
           sinopse: book.sinopse || "",
         });
-        if (book.capa) setCoverPreview(book.capa);
+        const existingCoverUrl = buildCoverPreviewUrl(
+          API_BASE_URL,
+          book.capa_url || book.capa
+        );
+        if (existingCoverUrl) setCoverPreview(existingCoverUrl);
         if (book.status) setStatus(book.status);
       } catch (error) {
         console.error("Erro ao carregar livro:", error);
@@ -136,26 +154,30 @@ export default function EditarLivro() {
   const handleCoverChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    setCoverFile(file);
     setCoverPreview(URL.createObjectURL(file));
   };
 
   const handleSave = async () => {
     try {
-      const bookData = {
-        ...form,
-        capa: coverPreview,
-        status: status
-      };
+      const formData = new FormData();
+      Object.keys(form).forEach((key) => {
+        formData.append(key, form[key]);
+      });
+      formData.append("status", status);
+      if (coverFile) {
+        formData.append("capa", coverFile);
+      }
 
-      const response = await fetch(`http://localhost:3000/api/books/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/livros/editar/${id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(bookData)
+        body: formData
       });
 
-      if (!response.ok) throw new Error("Erro ao salvar livro");
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.details || errData.error || "Erro ao salvar livro");
+      }
       alert("Livro atualizado com sucesso! ✅");
       navigate("/");
     } catch (error) {
@@ -168,7 +190,7 @@ export default function EditarLivro() {
     if (!window.confirm("Tem certeza que deseja excluir este livro?")) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/api/books/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/livros/deletar/${id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json"
@@ -232,9 +254,9 @@ export default function EditarLivro() {
                   <input
                     className="form-input"
                     type="text"
-                    name="ano"
+                    name="ano_publ"
                     placeholder="Ex: 1998"
-                    value={form.ano}
+                    value={form.ano_publ}
                     onChange={handleChange}
                   />
                 </div>

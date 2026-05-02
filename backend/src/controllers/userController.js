@@ -1,9 +1,16 @@
 const crypto = require("crypto");
-const jwt = require("jsonwebtoken");
 const db = require("../config/db");
 
 function hashPassword(password) {
   return crypto.createHash("sha256").update(password).digest("hex");
+}
+
+function sha256Hex(s) {
+  return crypto.createHash("sha256").update(String(s)).digest("hex");
+}
+
+function randomToken() {
+  return crypto.randomBytes(32).toString("hex");
 }
 
 function sanitizeUser(user) {
@@ -84,19 +91,30 @@ const authenticateUser = async (req, res) => {
       return res.status(401).json({ error: "E-mail ou senha incorretos." });
     }
 
-    const token = jwt.sign(
-      {
-        sub: user.id,
-        email: user.email,
-        tipo: user.tipo,
-      },
-      process.env.JWT_SECRET || "dev_secret_change_me",
-      { expiresIn: "12h" }
+    // cria sessão no banco (expira em 12h)
+    const token = randomToken();
+    const tokenHash = sha256Hex(token);
+    const sessionId = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000);
+
+    await db.query(
+      `INSERT INTO auth_sessions
+        (id, user_id, token_hash, user_nome, user_email, user_tipo, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [sessionId, user.id, tokenHash, user.nome, user.email, user.tipo, expiresAt.toISOString()]
     );
+
+    // cookie httpOnly para não depender de localStorage
+    res.cookie("biblioFacil_token", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false, // em produção: true (https)
+      maxAge: 12 * 60 * 60 * 1000,
+      path: "/",
+    });
 
     return res.status(200).json({
       message: "Login realizado com sucesso.",
-      token,
       user: sanitizeUser(user),
     });
   } catch (error) {
@@ -105,4 +123,18 @@ const authenticateUser = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, authenticateUser };
+const logoutUser = async (req, res) => {
+  try {
+    const sessionId = req.user?.session_id;
+    if (sessionId) {
+      await db.query("DELETE FROM auth_sessions WHERE id = $1", [sessionId]);
+    }
+    res.clearCookie("biblioFacil_token", { path: "/" });
+    return res.status(200).json({ message: "Logout realizado." });
+  } catch (error) {
+    console.error("Erro ao deslogar:", error);
+    return res.status(500).json({ error: "Erro ao deslogar." });
+  }
+};
+
+module.exports = { registerUser, authenticateUser, logoutUser };

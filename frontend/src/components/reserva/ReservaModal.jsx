@@ -44,7 +44,7 @@ function clampDate(date, min, max) {
 }
 
 export default function ReservaModal({ open, onClose, book }) {
-  const { user } = useAuth();
+  const { user, authenticated, loading: authLoading } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -168,6 +168,16 @@ export default function ReservaModal({ open, onClose, book }) {
     setError("");
     setSuccess("");
 
+    if (authLoading) {
+      setError("Carregando sua sessão... tente novamente.");
+      return;
+    }
+
+    if (!authenticated) {
+      setError("Faça login para reservar.");
+      return;
+    }
+
     if (!book?.id) {
       setError("Não foi possível identificar o livro para reservar.");
       return;
@@ -181,7 +191,6 @@ export default function ReservaModal({ open, onClose, book }) {
     try {
       const payload = {
         bookId: book.id,
-        userId: user?.id,
         nome: form.nome.trim(),
         email: form.email.trim(),
         retirada: form.retirada,
@@ -191,6 +200,7 @@ export default function ReservaModal({ open, onClose, book }) {
 
       await createReserva(payload);
       setSuccess("Reserva enviada. Aguarde a confirmação.");
+      onClose?.();
     } catch (err) {
       setError(err?.message || "Não foi possível enviar a reserva.");
     } finally {
