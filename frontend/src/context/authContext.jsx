@@ -18,8 +18,8 @@ export function AuthProvider({ children }) {
         api.defaults.headers.Authorization = `Bearer ${storageToken}`;
         
         try {
-          // 2. Chama a rota /me que criaste no backend para validar o token
-          const response = await api.get('/me');
+          // 2. Valida token e puxa o usuário atualizado do banco
+          const response = await api.get("/users/me");
           setUser(response.data.user);
         } catch (error) {
           // Se o token for inválido/expirado, o backend responde 403 e limpamos tudo

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../context/authContext";
 import { createReserva } from "../../services/reservas";
+import { getMe } from "../../services/users";
 import "./ReservaModal.css";
 
 function pad2(n) {
@@ -47,6 +48,7 @@ export default function ReservaModal({ open, onClose, book }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
   const today = useMemo(() => normalizeDateOnly(new Date()), []);
   const defaultRetirada = useMemo(() => today, [today]);
@@ -69,6 +71,7 @@ export default function ReservaModal({ open, onClose, book }) {
     if (!open) return;
     setError("");
     setSuccess("");
+    setLoadingProfile(false);
 
     const nome = user?.nome || "";
     const email = user?.email || "";
@@ -82,6 +85,35 @@ export default function ReservaModal({ open, onClose, book }) {
       observacoes: "",
     }));
   }, [open, user, defaultRetirada, defaultLimite]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+
+    async function loadProfile() {
+      try {
+        setLoadingProfile(true);
+        const data = await getMe();
+        if (cancelled) return;
+        const nome = data?.user?.nome || "";
+        const email = data?.user?.email || "";
+        setForm((f) => ({
+          ...f,
+          nome: nome || f.nome,
+          email: email || f.email,
+        }));
+      } catch {
+        // Se falhar, mantemos os dados do contexto/localStorage.
+      } finally {
+        if (!cancelled) setLoadingProfile(false);
+      }
+    }
+
+    loadProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -202,6 +234,9 @@ export default function ReservaModal({ open, onClose, book }) {
                 autoComplete="name"
                 required
               />
+              {loadingProfile ? (
+                <div className="rf-hint">Carregando seus dados...</div>
+              ) : null}
             </div>
 
             <div className="rf-field">

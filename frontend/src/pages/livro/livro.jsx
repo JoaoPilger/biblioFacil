@@ -73,9 +73,7 @@ function Sinopse({ text }) {
 const BOOK = {
   id: 1,
   title: "Titulo Livro",
-  titulo: "Titulo Livro",
   author: "Escritor",
-  autor: "Escritor",
   status: "Disponível",
   sinopse: `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus tincidunt sollicitudin lobortis. Duis in risus accumsan, aliquam lacus vitae, pellentesque ipsum. Praesent sodales ipsum non tortor vulputate euismod eu non quam. Ut maximus mollis ipsum, at tempor ligula tempor in. In ultricies posuere arcu id tristique. Nulla sit amet lorem tellus. Fusce non accumsan elit. Donec semper nec mauris at pharetra. Sed sit amet neque tellus. Duis sit amet accumsan ligula. Nam nibh nunc, vulputate sit amet consectetur eget, feugiat eget lectus.`,
 };
