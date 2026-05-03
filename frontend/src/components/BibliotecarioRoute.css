@@ -1,0 +1,33 @@
+.bibliotecario-gate {
+  min-height: 100vh;
+  background: #f0e8df;
+  font-family: "Lato", sans-serif;
+}
+
+.bibliotecario-gate__main {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: #4a3728;
+}
+
+.bibliotecario-gate__title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.bibliotecario-gate__text {
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.bibliotecario-gate__link {
+  color: #8b3a2a;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.bibliotecario-gate__link:hover {
+  text-decoration: underline;
+}

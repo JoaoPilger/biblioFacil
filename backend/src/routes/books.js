@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 const bookControler = require('../controllers/bookController');
 const authenticateToken = require('../middlewares/auth');
+const requireBibliotecario = require('../middlewares/auth').requireBibliotecario;
 
 const multer = require('multer');
 const path = require('path');
@@ -28,14 +29,31 @@ router.post('/:id/reservar', authenticateToken, bookControler.reserveBook);
 router.get('/:id', bookControler.getBookId);
 
 
-// ROTAS PRIVADAS
+// ROTAS PRIVADAS (bibliotecário + sessão)
 // cadastrar livro
-router.post('/cadastrar', upload.single('capa'), bookControler.registerBook);
+router.post(
+  '/cadastrar',
+  authenticateToken,
+  requireBibliotecario,
+  upload.single('capa'),
+  bookControler.registerBook
+);
 
 // editar livro
-router.put('/editar/:id', upload.single('capa'), bookControler.modificateBook);
+router.put(
+  '/editar/:id',
+  authenticateToken,
+  requireBibliotecario,
+  upload.single('capa'),
+  bookControler.modificateBook
+);
 
 // deletar livro
-router.delete('/deletar/:id', bookControler.deleteBook);
+router.delete(
+  '/deletar/:id',
+  authenticateToken,
+  requireBibliotecario,
+  bookControler.deleteBook
+);
 
 module.exports = router;

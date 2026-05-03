@@ -79,5 +79,16 @@ const optionalAuthenticate = async (req, res, next) => {
   }
 };
 
+/** Deve vir depois de `authenticateToken`. */
+const requireBibliotecario = (req, res, next) => {
+  if (!req.user || req.user.tipo !== "bibliotecario") {
+    return res.status(403).json({
+      error: "Acesso restrito. Apenas bibliotecários podem realizar esta ação.",
+    });
+  }
+  next();
+};
+
 module.exports = authenticateToken;
 module.exports.optionalAuthenticate = optionalAuthenticate;
+module.exports.requireBibliotecario = requireBibliotecario;

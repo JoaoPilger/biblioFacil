@@ -11,6 +11,21 @@ import { useAuth } from "../../context/authContext";
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 function Hero({ user, totalBooks, loading }) {
+  const secondaryCta =
+    !user ? (
+      <Link to="/login" className="hero__btn hero__btn--secondary">
+        Faça login
+      </Link>
+    ) : user.tipo === "bibliotecario" ? (
+      <Link to="/adicionar-livro" className="hero__btn hero__btn--secondary">
+        Adicionar livro
+      </Link>
+    ) : (
+      <Link to="/resultado_busca" className="hero__btn hero__btn--secondary">
+        Buscar livros
+      </Link>
+    );
+
   return (
     <section className="hero" aria-label="Destaque">
       <div className="hero__content">
@@ -23,9 +38,7 @@ function Hero({ user, totalBooks, loading }) {
           <Link to="/" className="hero__btn hero__btn--primary">
             Explorar livros
           </Link>
-          <Link to={user ? "/adicionar-livro" : "/login"} className="hero__btn hero__btn--secondary">
-            {user ? "Adicionar livro" : "Faça login"}
-          </Link>
+          {secondaryCta}
         </div>
         <div className="hero__stats">
           <div className="hero__stat-card">

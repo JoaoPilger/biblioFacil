@@ -1,13 +1,22 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { loginLocal } from "../../localAuth";
 import "./Login.css";
 import {useAuth} from "../../context/authContext"
 import Header from "../../components/header/Header"
 import Footer from "../../components/footer/Footer"
 
+function safeBibliotecarioRedirectPath(from) {
+  const pathname = typeof from === "string" ? from : from?.pathname;
+  if (!pathname || typeof pathname !== "string") return null;
+  if (pathname === "/adicionar-livro") return pathname;
+  if (/^\/editar\/[^/]+$/.test(pathname)) return pathname + (from?.search || "");
+  return null;
+}
+
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -28,8 +37,12 @@ export default function Login() {
     }
 
     login(result.user);
-    
-    navigate("/", { replace: true });
+
+    const target =
+      result.user?.tipo === "bibliotecario"
+        ? safeBibliotecarioRedirectPath(location.state?.from)
+        : null;
+    navigate(target || "/", { replace: true });
   }
 
   return (

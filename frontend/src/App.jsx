@@ -4,6 +4,7 @@ import Cadastro from './pages/login_cadastro/cadastro'
 import PageInicial from './pages/page_inicial/page_inicial'
 import AdicionarLivro from './pages/adicionar_livro/add_livro'
 import EditarLivro from './pages/editar_livro/edit_livro'
+import BibliotecarioRoute from './components/BibliotecarioRoute'
 import ResultadoBusca from './pages/resultado_busca/resultado_busca'
 import Livro from './pages/livro/livro'
 import './App.css'
@@ -15,8 +16,22 @@ function App() {
         <Route path="/" element={<PageInicial />} />
         <Route path="/login" element={<Login />} />
         <Route path="/cadastro" element={<Cadastro />} />
-        <Route path="/adicionar-livro" element={<AdicionarLivro />} />
-        <Route path="/editar/:id" element={<EditarLivro />} />
+        <Route
+          path="/adicionar-livro"
+          element={
+            <BibliotecarioRoute>
+              <AdicionarLivro />
+            </BibliotecarioRoute>
+          }
+        />
+        <Route
+          path="/editar/:id"
+          element={
+            <BibliotecarioRoute>
+              <EditarLivro />
+            </BibliotecarioRoute>
+          }
+        />
         <Route path="/resultado_busca" element={<ResultadoBusca />}/>
         <Route path="/livro/:id" element={<Livro />}/>
         <Route path="*" element={<Navigate to="/" replace />} />

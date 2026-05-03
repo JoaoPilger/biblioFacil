@@ -171,7 +171,8 @@ export default function EditarLivro() {
 
       const response = await fetch(`${API_BASE_URL}/livros/editar/${id}`, {
         method: "PUT",
-        body: formData
+        body: formData,
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -193,8 +194,9 @@ export default function EditarLivro() {
       const response = await fetch(`${API_BASE_URL}/livros/deletar/${id}`, {
         method: "DELETE",
         headers: {
-          "Content-Type": "application/json"
-        }
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
       });
 
       if (!response.ok) throw new Error("Erro ao deletar livro");

@@ -107,9 +107,11 @@ export default function AdicionarLivro() {
         formData.append('capa', coverFile);
       }
 
-      const response = await fetch("http://localhost:3000/livros/cadastrar", {
+      const apiBase = import.meta.env.VITE_API_URL || "http://localhost:3000";
+      const response = await fetch(`${apiBase}/livros/cadastrar`, {
         method: "POST",
         body: formData,
+        credentials: "include",
       });
 
       if (!response.ok) {
