@@ -10,12 +10,12 @@ export default function Header() {
 
   return (
     <nav className="navbar">
-      <div className="navbar__logo">
+      <Link to="/" className="navbar__logo" aria-label="Ir para a página inicial">
         <div className="navbar__logo-icon">
           <BookIcon size={22} color="#f5f0e8" />
         </div>
         <span className="navbar__title">BiblioFácil</span>
-      </div>
+      </Link>
 
       <div className="navbar__right">
         <a href="#" className="nav-link">

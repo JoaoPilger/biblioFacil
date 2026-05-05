@@ -18,7 +18,7 @@ export default function useBookSearchNavigation() {
       const term = (genre ?? "").trim();
       if (setQuery) setQuery(term);
       if (!term) return;
-      navigate(`/resultado_busca?q=${encodeURIComponent(term)}`);
+      navigate(`/resultado_busca?genero=${encodeURIComponent(term)}`);
     },
     [navigate]
   );

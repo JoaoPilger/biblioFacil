@@ -5,6 +5,7 @@ import Footer from "../../components/footer/Footer";
 import { BookIcon } from "../../components/Icons";
 import SearchBar from "../../components/searchBar/SearchBar";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { getLivros } from "../../services/livros";
 
 
 const FilterIcon = ({ size = 14 }) => (
@@ -34,7 +35,9 @@ function BookCover() {
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 function BookCard({ id, titulo, autor, status = "disponivel", capa_url, index, onOpen }) {
-  const coverSrc = capa_url ? `${API_BASE}${capa_url}` : null;
+  const coverSrc = capa_url
+    ? `${API_BASE}${capa_url.replace("/public", "")}`
+    : `${API_BASE}/covers/default.svg`;
   const statusLabel = useMemo(() => {
     if (!status) return "Disponível";
     const s = String(status).toLowerCase();
@@ -81,7 +84,11 @@ function BookCard({ id, titulo, autor, status = "disponivel", capa_url, index, o
 export default function BiblioFacil() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialQuery = searchParams.get("q") ?? searchParams.get("search") ?? "";
+  const initialQuery =
+    searchParams.get("q") ??
+    searchParams.get("search") ??
+    searchParams.get("genero") ??
+    "";
   const [query, setQuery] = useState(initialQuery);
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -89,6 +96,9 @@ export default function BiblioFacil() {
 
   const effectiveQuery = useMemo(() => {
     return (searchParams.get("q") ?? searchParams.get("search") ?? "").trim();
+  }, [searchParams]);
+  const effectiveGenre = useMemo(() => {
+    return (searchParams.get("genero") ?? "").trim();
   }, [searchParams]);
 
   const handleSearch = (rawTerm) => {
@@ -105,8 +115,36 @@ export default function BiblioFacil() {
   };
 
   useEffect(() => {
-    setQuery(effectiveQuery);
-  }, [effectiveQuery]);
+    setQuery(effectiveQuery || effectiveGenre);
+  }, [effectiveQuery, effectiveGenre]);
+
+  useEffect(() => {
+    const loadBooks = async () => {
+      if (!effectiveQuery && !effectiveGenre) {
+        setBooks([]);
+        setError("");
+        return;
+      }
+
+      setLoading(true);
+      setError("");
+
+      try {
+        const items = await getLivros({
+          search: effectiveQuery || undefined,
+          genero: effectiveGenre || undefined,
+        });
+        setBooks(items);
+      } catch {
+        setBooks([]);
+        setError("Erro ao buscar livros.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBooks();
+  }, [effectiveQuery, effectiveGenre]);
 
   return (
     <div className="app">
@@ -117,11 +155,6 @@ export default function BiblioFacil() {
           value={query}
           onChange={setQuery}
           onSearch={handleSearch}
-          fetchBooks
-          autoFetch
-          onResults={(items) => setBooks(items)}
-          onLoadingChange={setLoading}
-          onError={(msg) => setError(msg)}
         />
         <Toolbar count={loading ? null : books.length} />
 
