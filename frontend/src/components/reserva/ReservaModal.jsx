@@ -43,7 +43,7 @@ function clampDate(date, min, max) {
   return date;
 }
 
-export default function ReservaModal({ open, onClose, book }) {
+export default function ReservaModal({ open, onClose, onSuccess, book }) {
   const { user, authenticated, loading: authLoading } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -198,8 +198,9 @@ export default function ReservaModal({ open, onClose, book }) {
         observacoes: form.observacoes.trim(),
       };
 
-      await createReserva(payload);
+      const data = await createReserva(payload);
       setSuccess("Reserva enviada. Aguarde a confirmação.");
+      onSuccess?.(data);
       onClose?.();
     } catch (err) {
       setError(err?.message || "Não foi possível enviar a reserva.");

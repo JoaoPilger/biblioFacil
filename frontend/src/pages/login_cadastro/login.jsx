@@ -6,10 +6,12 @@ import {useAuth} from "../../context/authContext"
 import Header from "../../components/header/Header"
 import Footer from "../../components/footer/Footer"
 
-function safeBibliotecarioRedirectPath(from) {
+function safeRedirectPath(from) {
   const pathname = typeof from === "string" ? from : from?.pathname;
   if (!pathname || typeof pathname !== "string") return null;
   if (pathname === "/adicionar-livro") return pathname;
+  if (pathname === "/confirmacoes") return pathname;
+  if (pathname === "/minhas-reservas") return pathname;
   if (/^\/editar\/[^/]+$/.test(pathname)) return pathname + (from?.search || "");
   return null;
 }
@@ -38,10 +40,7 @@ export default function Login() {
 
     login(result.user);
 
-    const target =
-      result.user?.tipo === "bibliotecario"
-        ? safeBibliotecarioRedirectPath(location.state?.from)
-        : null;
+    const target = safeRedirectPath(location.state?.from);
     navigate(target || "/", { replace: true });
   }
 

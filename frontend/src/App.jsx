@@ -5,8 +5,11 @@ import PageInicial from './pages/page_inicial/page_inicial'
 import AdicionarLivro from './pages/adicionar_livro/add_livro'
 import EditarLivro from './pages/editar_livro/edit_livro'
 import BibliotecarioRoute from './components/BibliotecarioRoute'
+import LeitorRoute from './components/LeitorRoute'
 import ResultadoBusca from './pages/resultado_busca/resultado_busca'
 import Livro from './pages/livro/livro'
+import Circulacao from './pages/circulacao/circulacao'
+import MinhasReservas from './pages/minhas_reservas/minhas_reservas'
 import './App.css'
 
 function App() {
@@ -34,6 +37,22 @@ function App() {
         />
         <Route path="/resultado_busca" element={<ResultadoBusca />}/>
         <Route path="/livro/:id" element={<Livro />}/>
+        <Route
+          path="/confirmacoes"
+          element={
+            <BibliotecarioRoute>
+              <Circulacao />
+            </BibliotecarioRoute>
+          }
+        />
+        <Route
+          path="/minhas-reservas"
+          element={
+            <LeitorRoute>
+              <MinhasReservas />
+            </LeitorRoute>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

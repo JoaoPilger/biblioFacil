@@ -24,6 +24,12 @@ router.get('/', bookControler.getBooks);
 
 // reserva (antes de /:id só para deixar explícito; POST não conflita com GET /:id)
 router.post('/:id/reservar', authenticateToken, bookControler.reserveBook);
+router.get('/:id/minha-reserva', authenticateToken, bookControler.getMinhaReserva);
+router.post('/:id/reserva/cancelar', authenticateToken, bookControler.cancelarReserva);
+router.get('/:id/meu-emprestimo', authenticateToken, bookControler.getMeuEmprestimo);
+
+// lista as reservas/empréstimos do usuário logado (precisa vir antes de /:id)
+router.get('/minhas-reservas', authenticateToken, bookControler.getMinhasReservas);
 
 // get específico
 router.get('/:id', bookControler.getBookId);

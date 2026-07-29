@@ -8,23 +8,6 @@ function parseOptionalInt(value) {
     return Number.isNaN(parsed) ? null : parsed;
 }
 
-function parseOptionalYearToDate(value) {
-    if (value === undefined || value === null || String(value).trim() === "") {
-        return null;
-    }
-    const raw = String(value).trim();
-    if (/^\d{4}-\d{2}-\d{2}T/.test(raw)) {
-        return raw.slice(0, 10);
-    }
-    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-        return raw;
-    }
-    if (/^\d{4}$/.test(raw)) {
-        return `${raw}-01-01`;
-    }
-    return raw;
-}
-
 // buscar todos os livros
 const getBooks = async (req, res) => {
     const { genero, limit, search } = req.query; 
@@ -119,7 +102,7 @@ const modificateBook = async (req, res) => {
     const { titulo, autor, ano_publ, edicao, editora, genero, isbn, paginas, sinopse, status} = req.body;
     const capa_url = req.file?.filename ? `/public/covers/${req.file.filename}` : null;
     const id = Number(req.params.id);
-    const anoFormatado = parseOptionalYearToDate(ano_publ);
+    const anoFormatado = parseOptionalInt(ano_publ);
     const paginasFormatadas = parseOptionalInt(paginas);
     const edicaoFormatada = parseOptionalInt(edicao);
 
@@ -291,4 +274,149 @@ const reserveBook = async (req, res) => {
     }
 };
 
-module.exports = { registerBook, modificateBook, getBooks, getBookId, deleteBook, reserveBook };
+/** GET /livros/:id/minha-reserva — retorna a reserva pendente do usuário logado para este livro, se houver */
+const getMinhaReserva = async (req, res) => {
+    const livroId = Number(req.params.id);
+    if (Number.isNaN(livroId)) {
+        return res.status(400).json({ error: "ID inválido." });
+    }
+
+    const userId = Number(req.user?.sub);
+    if (Number.isNaN(userId)) {
+        return res.status(401).json({ error: "Sessão inválida." });
+    }
+
+    try {
+        const result = await db.query(
+            `SELECT id, livro_id, data_retirada, data_limite, status, created_at
+             FROM reservas
+             WHERE livro_id = $1 AND user_id = $2 AND status = 'pendente'
+             ORDER BY created_at DESC
+             LIMIT 1`,
+            [livroId, userId]
+        );
+        res.json({ reserva: result.rows[0] || null });
+    } catch (error) {
+        console.error("Erro ao buscar reserva do usuário:", error);
+        res.status(500).json({ error: "Erro ao buscar reserva." });
+    }
+};
+
+/** POST /livros/:id/reserva/cancelar — cancela a reserva pendente do usuário logado para este livro */
+const cancelarReserva = async (req, res) => {
+    const livroId = Number(req.params.id);
+    if (Number.isNaN(livroId)) {
+        return res.status(400).json({ error: "ID inválido." });
+    }
+
+    const userId = Number(req.user?.sub);
+    if (Number.isNaN(userId)) {
+        return res.status(401).json({ error: "Sessão inválida." });
+    }
+
+    const client = await db.connect();
+    try {
+        await client.query("BEGIN");
+
+        const reservaResult = await client.query(
+            `SELECT id FROM reservas WHERE livro_id = $1 AND user_id = $2 AND status = 'pendente' FOR UPDATE`,
+            [livroId, userId]
+        );
+        if (reservaResult.rows.length === 0) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({ error: "Nenhuma reserva pendente encontrada." });
+        }
+        const reservaId = reservaResult.rows[0].id;
+
+        await client.query("UPDATE reservas SET status = 'cancelada' WHERE id = $1", [reservaId]);
+        await client.query(
+            "UPDATE livros SET status = 'disponivel' WHERE id = $1 AND status = 'reservado'",
+            [livroId]
+        );
+
+        await client.query("COMMIT");
+        res.json({ message: "Reserva cancelada." });
+    } catch (error) {
+        await client.query("ROLLBACK");
+        console.error("Erro ao cancelar reserva:", error);
+        res.status(500).json({ error: "Erro ao cancelar reserva." });
+    } finally {
+        client.release();
+    }
+};
+
+/** GET /livros/:id/meu-emprestimo — retorna o empréstimo ativo do usuário logado para este livro, se houver */
+const getMeuEmprestimo = async (req, res) => {
+    const livroId = Number(req.params.id);
+    if (Number.isNaN(livroId)) {
+        return res.status(400).json({ error: "ID inválido." });
+    }
+
+    const userId = Number(req.user?.sub);
+    if (Number.isNaN(userId)) {
+        return res.status(401).json({ error: "Sessão inválida." });
+    }
+
+    try {
+        const result = await db.query(
+            `SELECT id, livro_id, data_emprestimo, data_devolucao_prevista, status
+             FROM emprestimos
+             WHERE livro_id = $1 AND user_id = $2 AND status = 'ativo'
+             ORDER BY data_emprestimo DESC
+             LIMIT 1`,
+            [livroId, userId]
+        );
+        res.json({ emprestimo: result.rows[0] || null });
+    } catch (error) {
+        console.error("Erro ao buscar empréstimo do usuário:", error);
+        res.status(500).json({ error: "Erro ao buscar empréstimo." });
+    }
+};
+
+/** GET /livros/minhas-reservas — lista as reservas e empréstimos (ativos e histórico) do usuário logado */
+const getMinhasReservas = async (req, res) => {
+    const userId = Number(req.user?.sub);
+    if (Number.isNaN(userId)) {
+        return res.status(401).json({ error: "Sessão inválida." });
+    }
+
+    try {
+        const reservasResult = await db.query(
+            `SELECT r.id, r.livro_id, r.status, r.data_retirada, r.data_limite, r.observacoes, r.created_at,
+                    l.titulo, l.autor, l.capa_url
+             FROM reservas r
+             JOIN livros l ON l.id = r.livro_id
+             WHERE r.user_id = $1
+             ORDER BY r.created_at DESC`,
+            [userId]
+        );
+
+        const emprestimosResult = await db.query(
+            `SELECT e.id, e.livro_id, e.status, e.data_emprestimo, e.data_devolucao_prevista, e.data_devolucao_real,
+                    l.titulo, l.autor, l.capa_url
+             FROM emprestimos e
+             JOIN livros l ON l.id = e.livro_id
+             WHERE e.user_id = $1
+             ORDER BY e.data_emprestimo DESC`,
+            [userId]
+        );
+
+        res.json({ reservas: reservasResult.rows, emprestimos: emprestimosResult.rows });
+    } catch (error) {
+        console.error("Erro ao buscar minhas reservas:", error);
+        res.status(500).json({ error: "Erro ao buscar suas reservas." });
+    }
+};
+
+module.exports = {
+    registerBook,
+    modificateBook,
+    getBooks,
+    getBookId,
+    deleteBook,
+    reserveBook,
+    getMinhaReserva,
+    cancelarReserva,
+    getMeuEmprestimo,
+    getMinhasReservas,
+};

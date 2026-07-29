@@ -9,6 +9,7 @@ var indexRouter = require('./src/routes/index');
 var usersRouter = require('./src/routes/users');
 var booksRouter = require('./src/routes/books');
 var reservasRouter = require("./src/routes/reservas");
+var circulacaoRouter = require("./src/routes/circulacao");
 
 var app = express();
 
@@ -28,6 +29,7 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/auth', usersRouter);
 app.use('/livros', booksRouter);
+app.use('/circulacao', circulacaoRouter);
 
 
 app.use(function(req, res, next) {

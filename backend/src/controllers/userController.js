@@ -52,10 +52,33 @@ const registerUser = async (req, res) => {
     `;
     const values = [nome, email, hashPassword(password), tipo];
     const result = await db.query(query, values);
+    const user = result.rows[0];
+
+    // cria sessão no banco (expira em 12h) para login automático
+    const token = randomToken();
+    const tokenHash = sha256Hex(token);
+    const sessionId = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000);
+
+    await db.query(
+      `INSERT INTO auth_sessions
+        (id, user_id, token_hash, user_nome, user_email, user_tipo, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [sessionId, user.id, tokenHash, user.nome, user.email, user.tipo, expiresAt.toISOString()]
+    );
+
+    // cookie httpOnly para não depender de localStorage
+    res.cookie("biblioFacil_token", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false, // em produção: true (https)
+      maxAge: 12 * 60 * 60 * 1000,
+      path: "/",
+    });
 
     return res.status(201).json({
       message: "Usuário cadastrado com sucesso.",
-      user: sanitizeUser(result.rows[0]),
+      user: sanitizeUser(user),
     });
   } catch (error) {
     if (error.code === "23505") {

@@ -23,6 +23,15 @@ export default function Header() {
         </a>
         {authenticated ? (
           <>
+            {user?.tipo === "bibliotecario" ? (
+              <Link to="/confirmacoes" className="nav-link">
+                Confirmações
+              </Link>
+            ) : (
+              <Link to="/minhas-reservas" className="nav-link">
+                Minhas Reservas
+              </Link>
+            )}
             <div className="nav-avatar" aria-label="Usuário logado">
               <UserIcon />
             </div>

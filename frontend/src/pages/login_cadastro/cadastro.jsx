@@ -4,6 +4,7 @@ import { registerLocal } from "../../localAuth";
 import "./Cadastro.css";
 import Header from "../../components/header/Header"
 import Footer from "../../components/footer/Footer"
+import { useAuth } from "../../context/authContext";
 
 const TIPO_API = {
   Leitor: "leitor",
@@ -16,6 +17,7 @@ function isValidEmail(s) {
 
 export default function Cadastro() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [form, setForm] = useState({
     nome: "",
     email: "",
@@ -86,6 +88,7 @@ export default function Cadastro() {
       setSubmitError(result.error);
       return;
     }
+    login(result.user);
     navigate("/", { replace: true });
   }
 
