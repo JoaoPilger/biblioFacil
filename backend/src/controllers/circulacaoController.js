@@ -135,9 +135,25 @@ const confirmarDevolucao = async (req, res) => {
   }
 };
 
+// executa manualmente a limpeza de reservas expiradas
+const executarLimpezaManual = async (req, res) => {
+  try {
+    const reservaCleanupService = require("../services/reservaCleanupService");
+    const resultado = await reservaCleanupService.cancelarReservasExpiradas();
+    res.json({
+      message: "Limpeza de reservas expiradas realizada com sucesso.",
+      resultado,
+    });
+  } catch (error) {
+    console.error("Erro ao executar limpeza manual de reservas:", error);
+    res.status(500).json({ error: "Erro ao executar limpeza de reservas expiradas." });
+  }
+};
+
 module.exports = {
   listRetiradasPendentes,
   listDevolucoesPendentes,
   confirmarRetirada,
   confirmarDevolucao,
+  executarLimpezaManual,
 };

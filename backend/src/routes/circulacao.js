@@ -10,4 +10,6 @@ router.post("/retiradas/:id/confirmar", authenticateToken, requireBibliotecario,
 router.get("/devolucoes", authenticateToken, requireBibliotecario, circulacaoController.listDevolucoesPendentes);
 router.post("/devolucoes/:id/confirmar", authenticateToken, requireBibliotecario, circulacaoController.confirmarDevolucao);
 
+router.post("/limpar-expiradas", authenticateToken, requireBibliotecario, circulacaoController.executarLimpezaManual);
+
 module.exports = router;
