@@ -11,6 +11,11 @@ var booksRouter = require('./src/routes/books');
 var reservasRouter = require("./src/routes/reservas");
 var circulacaoRouter = require("./src/routes/circulacao");
 
+const { iniciarRotinaLimpeza } = require("./src/services/reservaCleanupService");
+
+// Inicia rotina em segundo plano para cancelar reservas expiradas (executa periodicamente)
+iniciarRotinaLimpeza();
+
 var app = express();
 
 const cors = require('cors');
