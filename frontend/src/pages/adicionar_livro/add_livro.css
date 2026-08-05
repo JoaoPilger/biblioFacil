@@ -32,59 +32,7 @@ body {
   color: var(--text-dark);
 }
 
-/* NAVBAR */
-.navbar {
-  background-color: var(--card-bg);
-  padding: 14px 40px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 2px 12px rgba(60, 35, 20, 0.1);
-}
 
-.navbar-logo {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.35rem;
-  font-weight: 600;
-  color: var(--text-dark);
-  letter-spacing: 0.02em;
-}
-
-.navbar-right {
-  display: flex;
-  align-items: center;
-  gap: 22px;
-}
-
-.navbar-link {
-  font-family: 'Lato', sans-serif;
-  font-size: 0.9rem;
-  color: var(--text-dark);
-  text-decoration: none;
-  font-weight: 400;
-  transition: color 0.2s;
-}
-
-.navbar-link:hover {
-  color: var(--accent);
-}
-
-.navbar-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background-color: var(--accent);
-  color: var(--white);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.navbar-icon:hover {
-  background-color: var(--btn-hover);
-}
 
 /* MAIN LAYOUT */
 .page-wrapper {
