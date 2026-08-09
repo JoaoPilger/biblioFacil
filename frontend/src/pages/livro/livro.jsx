@@ -1,19 +1,19 @@
 import "./livro.css";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import Header from "../../components/header/Header"
 import Footer from "../../components/footer/Footer"
 import SearchBar from "../../components/searchBar/SearchBar";
 import ReservaModal from "../../components/reserva/ReservaModal";
 import useBookSearchNavigation from "../../hooks/useBookSearchNavigation";
 import { useAuth } from "../../context/authContext";
+import API_BASE from "../../lib/apiBase";
 import {
   getMinhaReserva,
   cancelarReserva,
   getMeuEmprestimo,
 } from "../../services/reservas";
-
-const API_BASE = "http://localhost:3000/";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -38,7 +38,7 @@ function BookHero({
   canReserve,
 }) {
   const capa_url_completa = capa_url
-  ? `${API_BASE}${capa_url.replace("/public", "")}`
+  ? `${API_BASE}/${capa_url.replace("/public", "")}`
   : `${API_BASE}/covers/default.svg`;
 
   return (
@@ -98,7 +98,6 @@ function Sinopse({ text }) {
   );
 }
 
-// ── Page ───────────────────────────────────────────────
 export default function BiblioFacilDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -116,16 +115,13 @@ export default function BiblioFacilDetail() {
     const fetchBook = async () => {
       try {
         setLoading(true);
-        // Faz a chamada para a rota definida no controller
-        const response = await fetch(`http://localhost:3000/livros/${id}`);
+        const response = await fetch(`${API_BASE}/livros/${id}`);
         
         if (!response.ok) {
           throw new Error("Livro não encontrado");
         }
 
         const data = await response.json();
-        console.log(data);
-        
         setBook(data);
       } catch (error) {
         console.error("Erro ao carregar livro:", error);
@@ -175,13 +171,12 @@ export default function BiblioFacilDetail() {
       setMinhaReserva(null);
       setBook((b) => (b ? { ...b, status: "disponivel" } : b));
     } catch (error) {
-      alert(error?.message || "Erro ao cancelar reserva.");
+      toast.error(error?.message || "Erro ao cancelar reserva.");
     } finally {
       setCancelBusy(false);
     }
   };
 
-  // Lógica de desabilitar botão baseada no status vindo do banco (init.sql)
   const s = String(book?.status || "").toLowerCase();
   const reserveDisabled = authLoading || !authenticated || s !== "disponivel";
   const canEdit = authenticated && isBibliotecario;
@@ -197,9 +192,9 @@ export default function BiblioFacilDetail() {
 
       <main className="main">
         <BookHero
-          title={book.titulo} // Usando 'titulo' conforme definido no init.sql
+          title={book.titulo}
           author={book.autor}
-          capa_url={book.capa_url} // Usando 'autor' conforme definido no init.sql
+          capa_url={book.capa_url}
           status={book.status}
           onReserve={() => setReservaOpen(true)}
           reserveDisabled={reserveDisabled}
@@ -225,7 +220,6 @@ export default function BiblioFacilDetail() {
         open={reservaOpen}
         onClose={() => setReservaOpen(false)}
         onSuccess={(data) => {
-          // atualização otimista: se reservou, status já muda sem recarregar
           setBook((b) => (b ? { ...b, status: "reservado" } : b));
           setMinhaReserva(data?.reserva ?? null);
         }}

@@ -1,7 +1,9 @@
 import { useState, useRef } from "react";
+import toast from "react-hot-toast";
 import "./add_livro.css";
-import Header from "../../components/header/Header"
-import Footer from "../../components/footer/Footer"
+import Header from "../../components/header/Header";
+import Footer from "../../components/footer/Footer";
+import API_BASE from "../../lib/apiBase";
 
 const GENRES = [
   "Romance",
@@ -17,15 +19,6 @@ const GENRES = [
   "Clássico",
   "Não-ficção",
 ];
-
-function UserIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-    </svg>
-  );
-}
 
 function ImageIcon() {
   return (
@@ -93,13 +86,9 @@ export default function AdicionarLivro() {
 
   const handleCoverChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setCoverFile(file);
-      setCoverPreview(URL.createObjectURL(file));
-    }
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setCoverPreview(url);
+    setCoverFile(file);
+    setCoverPreview(URL.createObjectURL(file));
   };
 
   const handleUploadClick = () => {
@@ -109,6 +98,7 @@ export default function AdicionarLivro() {
   /**
    * Busca dados do livro na API OpenLibrary usando o ISBN informado.
    * Endpoint: https://openlibrary.org/api/books?bibkeys=ISBN:{isbn}&format=json&jscmd=data
+   * Também busca e preenche a imagem de capa se disponível.
    */
   const handleIsbnSearch = async () => {
     const isbn = form.isbn.replace(/[^0-9X]/gi, "").trim();
@@ -162,6 +152,25 @@ export default function AdicionarLivro() {
         sinopse:  sinopse                           || prev.sinopse,
       }));
 
+      // Tenta carregar a imagem da capa (OpenLibrary Cover API)
+      const coverUrl = book.cover?.large || book.cover?.medium || book.cover?.small || `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`;
+      if (coverUrl) {
+        try {
+          const imgRes = await fetch(coverUrl);
+          if (imgRes.ok) {
+            const blob = await imgRes.blob();
+            // OpenLibrary retorna um PNG de 1x1 (menos de 1KB) quando não existe imagem cadastrada
+            if (blob.size > 1000) {
+              const file = new File([blob], `capa_${isbn}.jpg`, { type: blob.type || "image/jpeg" });
+              setCoverFile(file);
+              setCoverPreview(URL.createObjectURL(blob));
+            }
+          }
+        } catch (imgErr) {
+          console.warn("Não foi possível carregar a capa:", imgErr);
+        }
+      }
+
       setIsbnSuccess(true);
     } catch (err) {
       setIsbnError("Falha ao buscar ISBN: " + (err.message || "Erro desconhecido."));
@@ -174,7 +183,7 @@ export default function AdicionarLivro() {
     e.preventDefault();
 
     if (!form.titulo || !form.autor || !form.isbn) {
-      alert("Por favor, preencha pelo menos título, autor e isbn!");
+      toast.error("Preencha pelo menos título, autor e ISBN.");
       return;
     }
 
@@ -189,8 +198,7 @@ export default function AdicionarLivro() {
         formData.append('capa', coverFile);
       }
 
-      const apiBase = import.meta.env.VITE_API_URL || "http://localhost:3000";
-      const response = await fetch(`${apiBase}/livros/cadastrar`, {
+      const response = await fetch(`${API_BASE}/livros/cadastrar`, {
         method: "POST",
         body: formData,
         credentials: "include",
@@ -201,9 +209,7 @@ export default function AdicionarLivro() {
         throw new Error(errData.details || errData.error || "Erro ao salvar livro");
       }
 
-      const result = await response.json();
-      console.log("Livro salvo:", result);
-      alert("Livro salvo com sucesso! 📚");
+      toast.success("Livro salvo com sucesso! 📚");
 
       setForm({
         titulo: "",
@@ -218,11 +224,12 @@ export default function AdicionarLivro() {
       });
 
       setCoverPreview(null);
+      setCoverFile(null);
       setIsbnSuccess(false);
       setIsbnError("");
     } catch (error) {
       console.error("Erro:", error);
-      alert("Erro ao salvar livro: " + error.message);
+      toast.error("Erro ao salvar livro: " + error.message);
     }
   };
 
@@ -247,9 +254,10 @@ export default function AdicionarLivro() {
 
               {/* ISBN com busca automática — posicionado primeiro */}
               <div className="form-group">
-                <label className="form-label">ISBN:</label>
+                <label className="form-label" htmlFor="add-isbn">ISBN:</label>
                 <div className="isbn-row">
                   <input
+                    id="add-isbn"
                     className={`form-input${isbnError ? " isbn-input--error" : ""}${isbnSuccess ? " isbn-input--success" : ""}`}
                     type="text"
                     name="isbn"
@@ -257,13 +265,14 @@ export default function AdicionarLivro() {
                     value={form.isbn}
                     onChange={handleChange}
                     maxLength={17}
+                    required
                   />
                   <button
                     type="button"
                     className="isbn-search-btn"
                     onClick={handleIsbnSearch}
                     disabled={isbnLoading}
-                    title="Buscar dados do livro pelo ISBN"
+                    title="Buscar dados e capa do livro pelo ISBN"
                   >
                     {isbnLoading ? (
                       <span className="isbn-spinner" />
@@ -283,60 +292,70 @@ export default function AdicionarLivro() {
 
               {/* Título */}
               <div className="form-group">
-                <label className="form-label">Título:</label>
+                <label className="form-label" htmlFor="add-titulo">Título:</label>
                 <input
+                  id="add-titulo"
                   className="form-input"
                   type="text"
                   name="titulo"
                   placeholder="Ex: Dom Casmurro"
                   value={form.titulo}
                   onChange={handleChange}
+                  required
                 />
               </div>
 
               {/* Autor */}
               <div className="form-group">
-                <label className="form-label">Autor:</label>
+                <label className="form-label" htmlFor="add-autor">Autor:</label>
                 <input
+                  id="add-autor"
                   className="form-input"
                   type="text"
                   name="autor"
                   placeholder="Ex: Machado de Assis"
                   value={form.autor}
                   onChange={handleChange}
+                  required
                 />
               </div>
 
               {/* Ano + Edição */}
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">Ano de Publicação:</label>
+                  <label className="form-label" htmlFor="add-ano">Ano de Publicação:</label>
                   <input
+                    id="add-ano"
                     className="form-input"
-                    type="text"
+                    type="number"
                     name="ano_publ"
                     placeholder="Ex: 1998"
                     value={form.ano_publ}
                     onChange={handleChange}
+                    min="0"
+                    max="2100"
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Edição:</label>
+                  <label className="form-label" htmlFor="add-edicao">Edição:</label>
                   <input
+                    id="add-edicao"
                     className="form-input"
-                    type="text"
+                    type="number"
                     name="edicao"
                     placeholder="Ex: 5"
                     value={form.edicao}
                     onChange={handleChange}
+                    min="1"
                   />
                 </div>
               </div>
 
               {/* Editora */}
               <div className="form-group">
-                <label className="form-label">Editora:</label>
+                <label className="form-label" htmlFor="add-editora">Editora:</label>
                 <input
+                  id="add-editora"
                   className="form-input"
                   type="text"
                   name="editora"
@@ -377,22 +396,25 @@ export default function AdicionarLivro() {
                   </div>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Número de Páginas:</label>
+                  <label className="form-label" htmlFor="add-paginas">Número de Páginas:</label>
                   <input
+                    id="add-paginas"
                     className="form-input"
-                    type="text"
+                    type="number"
                     name="paginas"
                     placeholder="Ex: 200"
                     value={form.paginas}
                     onChange={handleChange}
+                    min="1"
                   />
                 </div>
               </div>
 
               {/* Sinopse */}
               <div className="form-group">
-                <label className="form-label">Sinopse:</label>
+                <label className="form-label" htmlFor="add-sinopse">Sinopse:</label>
                 <textarea
+                  id="add-sinopse"
                   className="form-textarea"
                   name="sinopse"
                   placeholder="Descrição do Conteúdo do Livro..."

@@ -4,13 +4,14 @@ import Header from "../../components/header/Header";
 import Footer from "../../components/footer/Footer";
 import { getMinhasReservas, cancelarReserva, renovarEmprestimo } from "../../services/reservas";
 import "./minhas_reservas.css";
+import API_BASE from "../../lib/apiBase";
 
-const API_BASE = "http://localhost:3000/";
+const API_BASE_SLASH = `${API_BASE}/`;
 
 function coverUrl(capa_url) {
   return capa_url
-    ? `${API_BASE}${capa_url.replace("/public", "")}`
-    : `${API_BASE}covers/default.svg`;
+    ? `${API_BASE_SLASH}${capa_url.replace("/public", "")}`
+    : `${API_BASE_SLASH}covers/default.svg`;
 }
 
 function formatDate(value) {

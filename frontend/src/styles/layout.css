@@ -1,0 +1,280 @@
+/* ── Centralized Layout Styles (Header & Footer) ── */
+
+.navbar {
+  background: linear-gradient(135deg, #362619 0%, #22170d 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  height: 60px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid rgba(212, 200, 184, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.navbar__logo {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.2s ease;
+}
+
+.navbar__logo:hover {
+  opacity: 0.92;
+}
+
+.navbar__logo:visited {
+  color: inherit;
+}
+
+.navbar__logo-icon {
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, #7a5c48 0%, #5c3d2e 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.navbar__title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #fdf8f4;
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.navbar__right {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.navbar__center {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  margin-left: auto;
+  margin-right: 1.5rem;
+}
+
+.nav-link {
+  color: #e8ddd4;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s ease, transform 0.15s ease;
+}
+
+.nav-link:hover {
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.nav-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #5c3d2e;
+  border: 2px solid #8b7355;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #f5ede6;
+  transition: all 0.2s ease;
+}
+
+.nav-avatar:hover {
+  border-color: #f5ede6;
+  transform: scale(1.05);
+}
+
+.nav-cta {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 240, 232, 0.35);
+  color: #fdf8f4;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.12);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.nav-cta:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Footer ── */
+.footer {
+  background: var(--surface, #e8e0d4);
+  border-top: 1px solid var(--border, #d4c8b8);
+  padding: 2.2rem 3rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.footer__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.footer__logo-icon {
+  width: 38px;
+  height: 38px;
+  background: var(--brown-mid, #7a5c48);
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer__brand-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary, #2c1f14);
+  line-height: 1.2;
+}
+
+.footer__brand-sub {
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+}
+
+.footer__copy {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #7a6758);
+  margin-top: 0.5rem;
+}
+
+.footer__links {
+  display: flex;
+  gap: 3rem;
+}
+
+.footer__col h4 {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary, #2c1f14);
+  margin-bottom: 0.75rem;
+}
+
+.footer-link {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text-secondary, #7a6758);
+  text-decoration: none;
+  margin-bottom: 0.4rem;
+  transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+  color: var(--brown-mid, #7a5c48);
+}
+
+@media (max-width: 520px) {
+  .navbar {
+    padding: 0 1rem;
+  }
+  .navbar__center {
+    display: none;
+  }
+  .footer {
+    padding: 1.5rem;
+  }
+  .footer__links {
+    gap: 1.5rem;
+  }
+}
+
+/* ── Modal Confirm Dialog ── */
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(44, 31, 20, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.confirm-dialog {
+  background: var(--bg, #f0ebe3);
+  border: 1px solid var(--border, #d4c8b8);
+  border-radius: 16px;
+  padding: 1.75rem 2rem;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 12px 36px rgba(44, 31, 20, 0.3);
+  text-align: center;
+}
+
+.confirm-dialog__message {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1rem;
+  color: var(--text-primary, #2c1f14);
+  margin-bottom: 1.5rem;
+  line-height: 1.45;
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.confirm-dialog__btn {
+  padding: 0.65rem 1.5rem;
+  border-radius: 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.confirm-dialog__btn--cancel {
+  background: transparent;
+  border: 1.5px solid var(--border, #d4c8b8);
+  color: var(--text-secondary, #7a6758);
+}
+
+.confirm-dialog__btn--cancel:hover {
+  background: rgba(122, 92, 72, 0.1);
+  color: var(--text-primary, #2c1f14);
+}
+
+.confirm-dialog__btn--confirm {
+  background: #8b2a1a;
+  color: #ffffff;
+}
+
+.confirm-dialog__btn--confirm:hover {
+  background: #721f12;
+  transform: translateY(-1px);
+}
