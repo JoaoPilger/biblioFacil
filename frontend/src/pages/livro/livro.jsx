@@ -36,10 +36,14 @@ function BookHero({
   cancelBusy,
   meuEmprestimo,
   canReserve,
+  exemplaresDisponiveis = 1,
+  quantidadeExemplares = 1,
 }) {
   const capa_url_completa = capa_url
   ? `${API_BASE}/${capa_url.replace("/public", "")}`
   : `${API_BASE}/covers/default.svg`;
+
+  const temDisponivel = exemplaresDisponiveis > 0;
 
   return (
     <div className="book-hero">
@@ -49,11 +53,16 @@ function BookHero({
       <div className="book-hero__info">
         <h1 className="book-hero__title">{title} - {author}</h1>
         <div className="book-hero__status">
-          <span className="status-dot" />
+          <span className="status-dot" style={{ backgroundColor: temDisponivel ? '#7aaa72' : '#d9534f' }} />
           {meuEmprestimo
             ? `Reservado com você. Devolução prevista: ${formatDate(meuEmprestimo.data_devolucao_prevista)}`
-            : `Status: ${status}`}
+            : `Status: ${temDisponivel ? 'Disponível' : 'Indisponível'}`}
         </div>
+
+        <div className={`exemplares-badge ${temDisponivel ? '' : 'exemplares-badge--esgotado'}`}>
+          📚 Exemplares disponíveis: <strong>{exemplaresDisponiveis} de {quantidadeExemplares}</strong>
+        </div>
+
         <div className="book-hero__actions">
           {!canReserve ? null : reservaPendente ? (
             <>
@@ -75,7 +84,7 @@ function BookHero({
             </button>
           ) : (
             <button className="btn-schedule" type="button" onClick={onReserve} disabled={reserveDisabled}>
-              Reservar/Retirar
+              {temDisponivel ? "Reservar/Retirar" : "Esgotado"}
             </button>
           )}
           {canEdit && (
@@ -169,7 +178,11 @@ export default function BiblioFacilDetail() {
     try {
       await cancelarReserva(id);
       setMinhaReserva(null);
-      setBook((b) => (b ? { ...b, status: "disponivel" } : b));
+      setBook((b) => (b ? {
+        ...b,
+        status: "disponivel",
+        exemplares_disponiveis: (b.exemplares_disponiveis || 0) + 1
+      } : b));
     } catch (error) {
       toast.error(error?.message || "Erro ao cancelar reserva.");
     } finally {
@@ -177,8 +190,12 @@ export default function BiblioFacilDetail() {
     }
   };
 
-  const s = String(book?.status || "").toLowerCase();
-  const reserveDisabled = authLoading || !authenticated || s !== "disponivel";
+  const qtdTotal = Math.max(1, Number(book?.quantidade_exemplares) || 1);
+  const dispCount = book?.exemplares_disponiveis !== undefined
+    ? Number(book.exemplares_disponiveis)
+    : (book?.status === "disponivel" ? 1 : 0);
+
+  const reserveDisabled = authLoading || !authenticated || dispCount <= 0;
   const canEdit = authenticated && isBibliotecario;
   const canReserve = !isBibliotecario;
 
@@ -205,12 +222,15 @@ export default function BiblioFacilDetail() {
           cancelBusy={cancelBusy}
           meuEmprestimo={meuEmprestimo}
           canReserve={canReserve}
+          exemplaresDisponiveis={dispCount}
+          quantidadeExemplares={qtdTotal}
         />
         <Sinopse text={book.sinopse} />
         <div className="book-details-extra" style={{ padding: '0 20px', fontSize: '0.9rem' }}>
-          <p><strong>Editora:</strong> {book.editora}</p>
-          <p><strong>Ano:</strong> {book.ano_publ}</p>
-          <p><strong>Gênero:</strong> {book.genero}</p>
+          <p><strong>Editora:</strong> {book.editora || "—"}</p>
+          <p><strong>Ano:</strong> {book.ano_publ || "—"}</p>
+          <p><strong>Gênero:</strong> {book.genero || "—"}</p>
+          <p><strong>Total de Exemplares:</strong> {qtdTotal}</p>
         </div>
       </main>
 

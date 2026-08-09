@@ -59,6 +59,7 @@ export default function AdicionarLivro() {
     isbn: "",
     paginas: "",
     sinopse: "",
+    quantidade_exemplares: "1",
   });
   const [genreOpen, setGenreOpen] = useState(false);
   const [coverPreview, setCoverPreview] = useState(null);
@@ -221,6 +222,7 @@ export default function AdicionarLivro() {
         paginas: "",
         sinopse: "",
         isbn: "",
+        quantidade_exemplares: "1",
       });
 
       setCoverPreview(null);
@@ -351,18 +353,34 @@ export default function AdicionarLivro() {
                 </div>
               </div>
 
-              {/* Editora */}
-              <div className="form-group">
-                <label className="form-label" htmlFor="add-editora">Editora:</label>
-                <input
-                  id="add-editora"
-                  className="form-input"
-                  type="text"
-                  name="editora"
-                  placeholder="Ex: Companhia das Letras"
-                  value={form.editora}
-                  onChange={handleChange}
-                />
+              {/* Editora + Quantidade de Exemplares */}
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label" htmlFor="add-editora">Editora:</label>
+                  <input
+                    id="add-editora"
+                    className="form-input"
+                    type="text"
+                    name="editora"
+                    placeholder="Ex: Companhia das Letras"
+                    value={form.editora}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="add-exemplares">Quantidade de Exemplares:</label>
+                  <input
+                    id="add-exemplares"
+                    className="form-input"
+                    type="number"
+                    name="quantidade_exemplares"
+                    placeholder="Ex: 1"
+                    value={form.quantidade_exemplares}
+                    onChange={handleChange}
+                    min="1"
+                    required
+                  />
+                </div>
               </div>
 
               {/* Gênero + Páginas */}
