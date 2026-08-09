@@ -392,8 +392,35 @@ const getMinhasReservas = async (req, res) => {
         );
 
         const emprestimosResult = await db.query(
-            `SELECT e.id, e.livro_id, e.status, e.data_emprestimo, e.data_devolucao_prevista, e.data_devolucao_real,
-                    l.titulo, l.autor, l.capa_url
+            `SELECT
+               e.id,
+               e.livro_id,
+               e.status,
+               e.data_emprestimo,
+               e.data_devolucao_prevista,
+               e.data_devolucao_real,
+               e.renovacoes,
+               l.titulo,
+               l.autor,
+               l.capa_url,
+               -- Dias de atraso (0 se ainda no prazo)
+               GREATEST(0, CURRENT_DATE - e.data_devolucao_prevista::date) AS dias_atraso,
+               -- Multa acumulada em R$
+               GREATEST(0, CURRENT_DATE - e.data_devolucao_prevista::date)
+                 * (SELECT valor FROM config_multa WHERE chave = 'multa_diaria') AS multa_acumulada,
+               -- Pode renovar: ativo + sem reservas pendentes de outros + menos de 2 renovações
+               CASE
+                 WHEN e.status = 'ativo'
+                   AND e.renovacoes < 2
+                   AND NOT EXISTS (
+                     SELECT 1 FROM reservas r2
+                     WHERE r2.livro_id = e.livro_id
+                       AND r2.user_id  <> $1
+                       AND r2.status   = 'pendente'
+                   )
+                 THEN TRUE
+                 ELSE FALSE
+               END AS pode_renovar
              FROM emprestimos e
              JOIN livros l ON l.id = e.livro_id
              WHERE e.user_id = $1
@@ -408,6 +435,86 @@ const getMinhasReservas = async (req, res) => {
     }
 };
 
+/** POST /livros/emprestimos/:id/renovar — estende prazo do empréstimo em 7 dias (máximo 2 renovações) */
+const renovarEmprestimo = async (req, res) => {
+    const emprestimoId = Number(req.params.id);
+    if (Number.isNaN(emprestimoId)) {
+        return res.status(400).json({ error: "ID de empréstimo inválido." });
+    }
+
+    const userId = Number(req.user?.sub);
+    if (Number.isNaN(userId)) {
+        return res.status(401).json({ error: "Sessão inválida." });
+    }
+
+    const client = await db.connect();
+    try {
+        await client.query("BEGIN");
+
+        // Busca o empréstimo com lock
+        const empResult = await client.query(
+            `SELECT id, user_id, livro_id, status, data_devolucao_prevista, renovacoes
+             FROM emprestimos WHERE id = $1 FOR UPDATE`,
+            [emprestimoId]
+        );
+        if (empResult.rows.length === 0) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({ error: "Empréstimo não encontrado." });
+        }
+        const emp = empResult.rows[0];
+
+        // Valida dono
+        if (Number(emp.user_id) !== userId) {
+            await client.query("ROLLBACK");
+            return res.status(403).json({ error: "Acesso negado." });
+        }
+        // Valida status
+        if (emp.status !== "ativo") {
+            await client.query("ROLLBACK");
+            return res.status(409).json({ error: "Apenas empréstimos ativos podem ser renovados." });
+        }
+        // Valida limite de renovações
+        if (emp.renovacoes >= 2) {
+            await client.query("ROLLBACK");
+            return res.status(409).json({ error: "Limite de renovações atingido (máximo 2)." });
+        }
+
+        // Verifica reservas pendentes de outros usuários para o mesmo livro
+        const reservaConflito = await client.query(
+            `SELECT 1 FROM reservas
+             WHERE livro_id = $1 AND user_id <> $2 AND status = 'pendente'
+             LIMIT 1`,
+            [emp.livro_id, userId]
+        );
+        if (reservaConflito.rows.length > 0) {
+            await client.query("ROLLBACK");
+            return res.status(409).json({ error: "Renovação indisponível: livro reservado por outro leitor." });
+        }
+
+        // Extende 7 dias a partir da data de devolução prevista atual
+        const updated = await client.query(
+            `UPDATE emprestimos
+             SET data_devolucao_prevista = (data_devolucao_prevista::date + INTERVAL '7 days')::date,
+                 renovacoes = renovacoes + 1
+             WHERE id = $1
+             RETURNING id, data_devolucao_prevista, renovacoes`,
+            [emprestimoId]
+        );
+
+        await client.query("COMMIT");
+        res.json({
+            message: "Empréstimo renovado com sucesso.",
+            emprestimo: updated.rows[0],
+        });
+    } catch (error) {
+        await client.query("ROLLBACK");
+        console.error("Erro ao renovar empréstimo:", error);
+        res.status(500).json({ error: "Erro ao renovar empréstimo." });
+    } finally {
+        client.release();
+    }
+};
+
 module.exports = {
     registerBook,
     modificateBook,
@@ -419,4 +526,5 @@ module.exports = {
     cancelarReserva,
     getMeuEmprestimo,
     getMinhasReservas,
+    renovarEmprestimo,
 };

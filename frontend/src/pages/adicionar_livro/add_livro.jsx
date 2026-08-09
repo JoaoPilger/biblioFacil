@@ -45,6 +45,16 @@ function ChevronDown({ className }) {
   );
 }
 
+// Ícone de busca (lupa)
+function SearchIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="7" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
 export default function AdicionarLivro() {
   const [form, setForm] = useState({
     titulo: "",
@@ -62,8 +72,18 @@ export default function AdicionarLivro() {
   const [coverFile, setCoverFile] = useState(null);
   const fileInputRef = useRef(null);
 
+  // Estados para busca por ISBN
+  const [isbnLoading, setIsbnLoading] = useState(false);
+  const [isbnError, setIsbnError] = useState("");
+  const [isbnSuccess, setIsbnSuccess] = useState(false);
+
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    // Limpa feedback de ISBN ao alterar o campo manualmente
+    if (e.target.name === "isbn") {
+      setIsbnError("");
+      setIsbnSuccess(false);
+    }
   };
 
   const handleGenreSelect = (g) => {
@@ -73,12 +93,10 @@ export default function AdicionarLivro() {
 
   const handleCoverChange = (e) => {
     const file = e.target.files[0];
-
     if (file) {
-      setCoverFile(file); // Guarda o arquivo para o upload
-      setCoverPreview(URL.createObjectURL(file)); // Gera a URL temporária para o preview
+      setCoverFile(file);
+      setCoverPreview(URL.createObjectURL(file));
     }
-
     if (!file) return;
     const url = URL.createObjectURL(file);
     setCoverPreview(url);
@@ -86,6 +104,70 @@ export default function AdicionarLivro() {
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
+  };
+
+  /**
+   * Busca dados do livro na API OpenLibrary usando o ISBN informado.
+   * Endpoint: https://openlibrary.org/api/books?bibkeys=ISBN:{isbn}&format=json&jscmd=data
+   */
+  const handleIsbnSearch = async () => {
+    const isbn = form.isbn.replace(/[^0-9X]/gi, "").trim();
+    if (!isbn || (isbn.length !== 10 && isbn.length !== 13)) {
+      setIsbnError("Digite um ISBN válido (10 ou 13 dígitos) antes de buscar.");
+      return;
+    }
+
+    setIsbnLoading(true);
+    setIsbnError("");
+    setIsbnSuccess(false);
+
+    try {
+      const url = `https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Erro ao conectar à OpenLibrary.");
+
+      const data = await response.json();
+      const key = `ISBN:${isbn}`;
+      const book = data[key];
+
+      if (!book) {
+        setIsbnError("Livro não encontrado na OpenLibrary. Preencha os dados manualmente.");
+        return;
+      }
+
+      // Extrai ano a partir de strings como "January 1, 1899" ou "1899"
+      let ano = "";
+      if (book.publish_date) {
+        const match = String(book.publish_date).match(/\b(\d{4})\b/);
+        if (match) ano = match[1];
+      }
+
+      // Extrai sinopse (tenta description.value, description como string, ou excerpt)
+      let sinopse = "";
+      if (book.description) {
+        sinopse = typeof book.description === "string"
+          ? book.description
+          : book.description?.value || "";
+      } else if (book.excerpts?.length > 0) {
+        sinopse = book.excerpts[0].text || "";
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        titulo:   book.title                        || prev.titulo,
+        autor:    book.authors?.[0]?.name           || prev.autor,
+        editora:  book.publishers?.[0]?.name        || prev.editora,
+        ano_publ: ano                               || prev.ano_publ,
+        paginas:  String(book.number_of_pages || "") || prev.paginas,
+        sinopse:  sinopse                           || prev.sinopse,
+      }));
+
+      setIsbnSuccess(true);
+    } catch (err) {
+      setIsbnError("Falha ao buscar ISBN: " + (err.message || "Erro desconhecido."));
+    } finally {
+      setIsbnLoading(false);
+    }
   };
 
   const handleSave = async (e) => {
@@ -136,6 +218,8 @@ export default function AdicionarLivro() {
       });
 
       setCoverPreview(null);
+      setIsbnSuccess(false);
+      setIsbnError("");
     } catch (error) {
       console.error("Erro:", error);
       alert("Erro ao salvar livro: " + error.message);
@@ -160,6 +244,43 @@ export default function AdicionarLivro() {
             </div>
 
             <form className="form-grid" onSubmit={handleSave}>
+
+              {/* ISBN com busca automática — posicionado primeiro */}
+              <div className="form-group">
+                <label className="form-label">ISBN:</label>
+                <div className="isbn-row">
+                  <input
+                    className={`form-input${isbnError ? " isbn-input--error" : ""}${isbnSuccess ? " isbn-input--success" : ""}`}
+                    type="text"
+                    name="isbn"
+                    placeholder="Ex: 978-85-359-0277-5"
+                    value={form.isbn}
+                    onChange={handleChange}
+                    maxLength={17}
+                  />
+                  <button
+                    type="button"
+                    className="isbn-search-btn"
+                    onClick={handleIsbnSearch}
+                    disabled={isbnLoading}
+                    title="Buscar dados do livro pelo ISBN"
+                  >
+                    {isbnLoading ? (
+                      <span className="isbn-spinner" />
+                    ) : (
+                      <SearchIcon />
+                    )}
+                    {isbnLoading ? "Buscando..." : "Buscar"}
+                  </button>
+                </div>
+                {isbnError && (
+                  <p className="isbn-feedback isbn-feedback--error">⚠ {isbnError}</p>
+                )}
+                {isbnSuccess && (
+                  <p className="isbn-feedback isbn-feedback--success">✓ Dados preenchidos com sucesso! Revise e ajuste se necessário.</p>
+                )}
+              </div>
+
               {/* Título */}
               <div className="form-group">
                 <label className="form-label">Título:</label>
@@ -266,20 +387,6 @@ export default function AdicionarLivro() {
                     onChange={handleChange}
                   />
                 </div>
-              </div>
-
-              {/* ISBN */}
-              <div className="form-group">
-                <label className="form-label">ISBN:</label>
-                <input
-                  className="form-input"
-                  type="text"
-                  name="isbn"
-                  placeholder="Ex: 978-85-359-0277-5"
-                  value={form.isbn}
-                  onChange={handleChange}
-                  maxLength={17}
-                />
               </div>
 
               {/* Sinopse */}
