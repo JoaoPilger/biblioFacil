@@ -6,6 +6,7 @@ import { BookIcon } from "../../components/Icons";
 import SearchBar from "../../components/searchBar/SearchBar";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getLivros } from "../../services/livros";
+import API_BASE from "../../lib/apiBase";
 
 
 const FilterIcon = ({ size = 14 }) => (
@@ -31,8 +32,6 @@ function Toolbar({ count }) {
 function BookCover() {
   return null;
 }
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 function BookCard({ id, titulo, autor, status = "disponivel", capa_url, index, onOpen }) {
   const coverSrc = capa_url
