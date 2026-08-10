@@ -1,19 +1,19 @@
 import "./livro.css";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
 import Header from "../../components/header/Header"
 import Footer from "../../components/footer/Footer"
 import SearchBar from "../../components/searchBar/SearchBar";
 import ReservaModal from "../../components/reserva/ReservaModal";
 import useBookSearchNavigation from "../../hooks/useBookSearchNavigation";
 import { useAuth } from "../../context/authContext";
-import API_BASE from "../../lib/apiBase";
 import {
   getMinhaReserva,
   cancelarReserva,
   getMeuEmprestimo,
 } from "../../services/reservas";
+
+const API_BASE = "http://localhost:3000/";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -36,14 +36,10 @@ function BookHero({
   cancelBusy,
   meuEmprestimo,
   canReserve,
-  exemplaresDisponiveis = 1,
-  quantidadeExemplares = 1,
 }) {
   const capa_url_completa = capa_url
-  ? `${API_BASE}/${capa_url.replace("/public", "")}`
+  ? `${API_BASE}${capa_url.replace("/public", "")}`
   : `${API_BASE}/covers/default.svg`;
-
-  const temDisponivel = exemplaresDisponiveis > 0;
 
   return (
     <div className="book-hero">
@@ -53,16 +49,11 @@ function BookHero({
       <div className="book-hero__info">
         <h1 className="book-hero__title">{title} - {author}</h1>
         <div className="book-hero__status">
-          <span className="status-dot" style={{ backgroundColor: temDisponivel ? '#7aaa72' : '#d9534f' }} />
+          <span className="status-dot" />
           {meuEmprestimo
             ? `Reservado com você. Devolução prevista: ${formatDate(meuEmprestimo.data_devolucao_prevista)}`
-            : `Status: ${temDisponivel ? 'Disponível' : 'Indisponível'}`}
+            : `Status: ${status}`}
         </div>
-
-        <div className={`exemplares-badge ${temDisponivel ? '' : 'exemplares-badge--esgotado'}`}>
-          📚 Exemplares disponíveis: <strong>{exemplaresDisponiveis} de {quantidadeExemplares}</strong>
-        </div>
-
         <div className="book-hero__actions">
           {!canReserve ? null : reservaPendente ? (
             <>
@@ -84,7 +75,7 @@ function BookHero({
             </button>
           ) : (
             <button className="btn-schedule" type="button" onClick={onReserve} disabled={reserveDisabled}>
-              {temDisponivel ? "Reservar/Retirar" : "Esgotado"}
+              Reservar/Retirar
             </button>
           )}
           {canEdit && (
@@ -107,6 +98,7 @@ function Sinopse({ text }) {
   );
 }
 
+// ── Page ───────────────────────────────────────────────
 export default function BiblioFacilDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -124,13 +116,16 @@ export default function BiblioFacilDetail() {
     const fetchBook = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_BASE}/livros/${id}`);
+        // Faz a chamada para a rota definida no controller
+        const response = await fetch(`http://localhost:3000/livros/${id}`);
         
         if (!response.ok) {
           throw new Error("Livro não encontrado");
         }
 
         const data = await response.json();
+        console.log(data);
+        
         setBook(data);
       } catch (error) {
         console.error("Erro ao carregar livro:", error);
@@ -178,24 +173,17 @@ export default function BiblioFacilDetail() {
     try {
       await cancelarReserva(id);
       setMinhaReserva(null);
-      setBook((b) => (b ? {
-        ...b,
-        status: "disponivel",
-        exemplares_disponiveis: (b.exemplares_disponiveis || 0) + 1
-      } : b));
+      setBook((b) => (b ? { ...b, status: "disponivel" } : b));
     } catch (error) {
-      toast.error(error?.message || "Erro ao cancelar reserva.");
+      alert(error?.message || "Erro ao cancelar reserva.");
     } finally {
       setCancelBusy(false);
     }
   };
 
-  const qtdTotal = Math.max(1, Number(book?.quantidade_exemplares) || 1);
-  const dispCount = book?.exemplares_disponiveis !== undefined
-    ? Number(book.exemplares_disponiveis)
-    : (book?.status === "disponivel" ? 1 : 0);
-
-  const reserveDisabled = authLoading || !authenticated || dispCount <= 0;
+  // Lógica de desabilitar botão baseada no status vindo do banco (init.sql)
+  const s = String(book?.status || "").toLowerCase();
+  const reserveDisabled = authLoading || !authenticated || s !== "disponivel";
   const canEdit = authenticated && isBibliotecario;
   const canReserve = !isBibliotecario;
 
@@ -209,9 +197,9 @@ export default function BiblioFacilDetail() {
 
       <main className="main">
         <BookHero
-          title={book.titulo}
+          title={book.titulo} // Usando 'titulo' conforme definido no init.sql
           author={book.autor}
-          capa_url={book.capa_url}
+          capa_url={book.capa_url} // Usando 'autor' conforme definido no init.sql
           status={book.status}
           onReserve={() => setReservaOpen(true)}
           reserveDisabled={reserveDisabled}
@@ -222,15 +210,12 @@ export default function BiblioFacilDetail() {
           cancelBusy={cancelBusy}
           meuEmprestimo={meuEmprestimo}
           canReserve={canReserve}
-          exemplaresDisponiveis={dispCount}
-          quantidadeExemplares={qtdTotal}
         />
         <Sinopse text={book.sinopse} />
         <div className="book-details-extra" style={{ padding: '0 20px', fontSize: '0.9rem' }}>
-          <p><strong>Editora:</strong> {book.editora || "—"}</p>
-          <p><strong>Ano:</strong> {book.ano_publ || "—"}</p>
-          <p><strong>Gênero:</strong> {book.genero || "—"}</p>
-          <p><strong>Total de Exemplares:</strong> {qtdTotal}</p>
+          <p><strong>Editora:</strong> {book.editora}</p>
+          <p><strong>Ano:</strong> {book.ano_publ}</p>
+          <p><strong>Gênero:</strong> {book.genero}</p>
         </div>
       </main>
 
@@ -240,6 +225,7 @@ export default function BiblioFacilDetail() {
         open={reservaOpen}
         onClose={() => setReservaOpen(false)}
         onSuccess={(data) => {
+          // atualização otimista: se reservou, status já muda sem recarregar
           setBook((b) => (b ? { ...b, status: "reservado" } : b));
           setMinhaReserva(data?.reserva ?? null);
         }}

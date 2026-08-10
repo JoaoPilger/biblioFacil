@@ -1,10 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
 import "./edit_livro.css";
 import Header from "../../components/header/Header"
 import Footer from "../../components/footer/Footer"
-import API_BASE from "../../lib/apiBase";
 
 const GENRES = [
   "Romance",
@@ -85,30 +83,13 @@ function buildCoverPreviewUrl(baseUrl, coverPath) {
   if (!coverPath) return null;
   if (/^https?:\/\//i.test(coverPath)) return coverPath;
 
+  // Compatibiliza valores antigos salvos como "/public/covers/..."
   const normalizedPath = coverPath.replace(/^\/public\//, "/");
   return `${baseUrl}${normalizedPath}`;
 }
 
-function ConfirmDialog({ open, message, onConfirm, onCancel }) {
-  if (!open) return null;
-  return (
-    <div className="confirm-backdrop">
-      <div className="confirm-dialog">
-        <p className="confirm-dialog__message">{message}</p>
-        <div className="confirm-dialog__actions">
-          <button type="button" className="confirm-dialog__btn confirm-dialog__btn--cancel" onClick={onCancel}>
-            Não
-          </button>
-          <button type="button" className="confirm-dialog__btn confirm-dialog__btn--confirm" onClick={onConfirm}>
-            Sim, excluir
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function EditarLivro() {
+  const API_BASE_URL = "http://localhost:3000";
   const { id } = useParams();
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -120,20 +101,20 @@ export default function EditarLivro() {
     genero: "",
     paginas: "",
     sinopse: "",
-    quantidade_exemplares: "1",
     id: ""
   });
   const [genreOpen, setGenreOpen] = useState(false);
   const [coverPreview, setCoverPreview] = useState(null);
   const [coverFile, setCoverFile] = useState(null);
   const [status, setStatus] = useState("reservado");
-  const [confirmOpen, setConfirmOpen] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Carregar dados do livro ao montar o componente
   useEffect(() => {
     const fetchBook = async () => {
       try {
-        const response = await fetch(`${API_BASE}/livros/${id}`);
+        console.log(id);
+        const response = await fetch(`${API_BASE_URL}/livros/${id}`);
         
         if (!response.ok) throw new Error("Livro não encontrado");
         const data = await response.json();
@@ -147,17 +128,16 @@ export default function EditarLivro() {
           genero: book.genero || "",
           paginas: book.paginas || "",
           sinopse: book.sinopse || "",
-          quantidade_exemplares: String(book.quantidade_exemplares || 1),
         });
         const existingCoverUrl = buildCoverPreviewUrl(
-          API_BASE,
+          API_BASE_URL,
           book.capa_url || book.capa
         );
         if (existingCoverUrl) setCoverPreview(existingCoverUrl);
         if (book.status) setStatus(book.status);
       } catch (error) {
         console.error("Erro ao carregar livro:", error);
-        toast.error("Erro ao carregar livro: " + error.message);
+        alert("Erro ao carregar livro: " + error.message);
       }
     };
     fetchBook();
@@ -179,11 +159,6 @@ export default function EditarLivro() {
   };
 
   const handleSave = async () => {
-    if (!form.titulo || !form.autor) {
-      toast.error("Preencha pelo menos título e autor.");
-      return;
-    }
-
     try {
       const formData = new FormData();
       Object.keys(form).forEach((key) => {
@@ -194,7 +169,7 @@ export default function EditarLivro() {
         formData.append("capa", coverFile);
       }
 
-      const response = await fetch(`${API_BASE}/livros/editar/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/livros/editar/${id}`, {
         method: "PUT",
         body: formData,
         credentials: "include",
@@ -204,18 +179,19 @@ export default function EditarLivro() {
         const errData = await response.json().catch(() => ({}));
         throw new Error(errData.details || errData.error || "Erro ao salvar livro");
       }
-      toast.success("Livro atualizado com sucesso!");
+      alert("Livro atualizado com sucesso! ✅");
       navigate("/");
     } catch (error) {
       console.error("Erro:", error);
-      toast.error("Erro ao salvar livro: " + error.message);
+      alert("Erro ao salvar livro: " + error.message);
     }
   };
 
   const handleDelete = async () => {
-    setConfirmOpen(false);
+    if (!window.confirm("Tem certeza que deseja excluir este livro?")) return;
+
     try {
-      const response = await fetch(`${API_BASE}/livros/deletar/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/livros/deletar/${id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -224,11 +200,11 @@ export default function EditarLivro() {
       });
 
       if (!response.ok) throw new Error("Erro ao deletar livro");
-      toast.success("Livro excluído com sucesso!");
+      alert("Livro excluído com sucesso!");
       navigate("/");
     } catch (error) {
       console.error("Erro:", error);
-      toast.error("Erro ao deletar livro: " + error.message);
+      alert("Erro ao deletar livro: " + error.message);
     }
   };
 
@@ -237,10 +213,12 @@ export default function EditarLivro() {
 
       <Header/>
 
+      {/* PAGE */}
       <div className="page-wrapper">
         <h1 className="page-title">Editar Livro</h1>
 
         <div className="content-grid">
+          {/* LEFT: Bibliographic Info */}
           <div className="card">
             <div className="step-header">
               <div className="step-badge">1</div>
@@ -249,91 +227,64 @@ export default function EditarLivro() {
 
             <div className="form-grid">
               <div className="form-group">
-                <label className="form-label" htmlFor="edit-titulo">Título:</label>
+                <label className="form-label">Título:</label>
                 <input
-                  id="edit-titulo"
                   className="form-input"
                   type="text"
                   name="titulo"
                   placeholder="Ex: Dom Casmurro"
                   value={form.titulo}
                   onChange={handleChange}
-                  required
                 />
               </div>
 
               <div className="form-group">
-                <label className="form-label" htmlFor="edit-autor">Autor:</label>
+                <label className="form-label">Autor:</label>
                 <input
-                  id="edit-autor"
                   className="form-input"
                   type="text"
                   name="autor"
                   placeholder="Ex: Machado de Assis"
                   value={form.autor}
                   onChange={handleChange}
-                  required
                 />
               </div>
 
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label" htmlFor="edit-ano">Ano de Publicação:</label>
+                  <label className="form-label">Ano de Publicação:</label>
                   <input
-                    id="edit-ano"
                     className="form-input"
-                    type="number"
+                    type="text"
                     name="ano_publ"
                     placeholder="Ex: 1998"
                     value={form.ano_publ}
                     onChange={handleChange}
-                    min="0"
-                    max="2100"
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label" htmlFor="edit-edicao">Edição:</label>
+                  <label className="form-label">Edição:</label>
                   <input
-                    id="edit-edicao"
                     className="form-input"
-                    type="number"
+                    type="text"
                     name="edicao"
                     placeholder="Ex: 3"
                     value={form.edicao}
                     onChange={handleChange}
-                    min="1"
                   />
                 </div>
               </div>
 
-              {/* Editora + Quantidade de Exemplares */}
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="edit-editora">Editora:</label>
-                  <input
-                    id="edit-editora"
-                    className="form-input"
-                    type="text"
-                    name="editora"
-                    placeholder="Ex: Companhia das Letras"
-                    value={form.editora}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="edit-exemplares">Quantidade de Exemplares:</label>
-                  <input
-                    id="edit-exemplares"
-                    className="form-input"
-                    type="number"
-                    name="quantidade_exemplares"
-                    placeholder="Ex: 1"
-                    value={form.quantidade_exemplares}
-                    onChange={handleChange}
-                    min="1"
-                    required
-                  />
-                </div>
+              <div className="form-group">
+                <label className="form-label">Editora:</label>
+                <input
+                  className="form-input"
+                  type="text"
+                  name="editora"
+                  placeholder="Ex: Companhia das Letras"
+                  value={form.editora}
+                  onChange={handleChange}
+                />
               </div>
 
               <div className="form-row">
@@ -364,24 +315,21 @@ export default function EditarLivro() {
                   </div>
                 </div>
                 <div className="form-group">
-                  <label className="form-label" htmlFor="edit-paginas">Número de Páginas:</label>
+                  <label className="form-label">Número de Páginas:</label>
                   <input
-                    id="edit-paginas"
                     className="form-input"
-                    type="number"
+                    type="text"
                     name="paginas"
                     placeholder="Ex: 200"
                     value={form.paginas}
                     onChange={handleChange}
-                    min="1"
                   />
                 </div>
               </div>
 
               <div className="form-group">
-                <label className="form-label" htmlFor="edit-sinopse">Sinopse:</label>
+                <label className="form-label">Sinopse:</label>
                 <textarea
-                  id="edit-sinopse"
                   className="form-textarea"
                   name="sinopse"
                   placeholder="Descrição do Conteúdo do Livro..."
@@ -392,7 +340,9 @@ export default function EditarLivro() {
             </div>
           </div>
 
+          {/* RIGHT COLUMN */}
           <div className="right-col">
+            {/* Card 2: Cover */}
             <div className="card">
               <div className="step-header">
                 <div className="step-badge">2</div>
@@ -442,6 +392,7 @@ export default function EditarLivro() {
               />
             </div>
 
+            {/* Card 3: Status */}
             <div className="card">
               <div className="step-header">
                 <div className="step-badge">3</div>
@@ -468,8 +419,9 @@ export default function EditarLivro() {
           </div>
         </div>
 
+        {/* ACTION BAR */}
         <div className="action-bar">
-          <button className="btn-delete" onClick={() => setConfirmOpen(true)}>
+          <button className="btn-delete" onClick={handleDelete}>
             Excluir Livro
           </button>
           <button className="btn-save" onClick={handleSave}>
@@ -478,13 +430,6 @@ export default function EditarLivro() {
         </div>
       </div>
       <Footer></Footer>
-
-      <ConfirmDialog
-        open={confirmOpen}
-        message="Tem certeza que deseja excluir este livro?"
-        onConfirm={handleDelete}
-        onCancel={() => setConfirmOpen(false)}
-      />
     </div>
   );
 }

@@ -4,9 +4,6 @@ const bookControler = require('../controllers/bookController');
 const authenticateToken = require('../middlewares/auth');
 const requireBibliotecario = require('../middlewares/auth').requireBibliotecario;
 
-// Rota de renovação de empréstimo (Leitor)
-// IMPORTANTE: declarada antes de /:id para evitar conflito com GET /:id
-
 const multer = require('multer');
 const path = require('path');
 
@@ -33,9 +30,6 @@ router.get('/:id/meu-emprestimo', authenticateToken, bookControler.getMeuEmprest
 
 // lista as reservas/empréstimos do usuário logado (precisa vir antes de /:id)
 router.get('/minhas-reservas', authenticateToken, bookControler.getMinhasReservas);
-
-// renovar empréstimo (Leitor) — precisa vir antes de /:id
-router.post('/emprestimos/:id/renovar', authenticateToken, bookControler.renovarEmprestimo);
 
 // get específico
 router.get('/:id', bookControler.getBookId);

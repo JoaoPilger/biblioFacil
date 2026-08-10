@@ -10,7 +10,6 @@ var usersRouter = require('./src/routes/users');
 var booksRouter = require('./src/routes/books');
 var reservasRouter = require("./src/routes/reservas");
 var circulacaoRouter = require("./src/routes/circulacao");
-var multaRouter = require("./src/routes/multa");
 
 const { iniciarRotinaLimpeza } = require("./src/services/reservaCleanupService");
 
@@ -36,7 +35,6 @@ app.use('/users', usersRouter);
 app.use('/auth', usersRouter);
 app.use('/livros', booksRouter);
 app.use('/circulacao', circulacaoRouter);
-app.use('/multa', multaRouter);
 
 
 app.use(function(req, res, next) {

@@ -1,4 +1,4 @@
-import API_BASE from "../lib/apiBase";
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 export async function getLivros({ search, genero, limit } = {}) {
   const params = new URLSearchParams();

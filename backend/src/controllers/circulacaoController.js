@@ -122,17 +122,7 @@ const confirmarDevolucao = async (req, res) => {
       "UPDATE emprestimos SET status = 'devolvido', data_devolucao_real = CURRENT_TIMESTAMP WHERE id = $1",
       [id]
     );
-    await client.query(
-      `UPDATE livros
-       SET status = 'disponivel'
-       WHERE id = $1 AND (
-         COALESCE(quantidade_exemplares, 1) > (
-           (SELECT COUNT(*) FROM reservas WHERE livro_id = $1 AND status = 'pendente') +
-           (SELECT COUNT(*) FROM emprestimos WHERE livro_id = $1 AND status = 'ativo')
-         )
-       )`,
-      [emprestimo.livro_id]
-    );
+    await client.query("UPDATE livros SET status = 'disponivel' WHERE id = $1", [emprestimo.livro_id]);
 
     await client.query("COMMIT");
     res.json({ message: "Devolução confirmada." });

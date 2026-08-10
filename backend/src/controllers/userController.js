@@ -70,8 +70,8 @@ const registerUser = async (req, res) => {
     // cookie httpOnly para não depender de localStorage
     res.cookie("biblioFacil_token", token, {
       httpOnly: true,
-      sameSite: "none",
-      secure: false, // em produção, use: true (https)
+      sameSite: "lax",
+      secure: false, // em produção: true (https)
       maxAge: 12 * 60 * 60 * 1000,
       path: "/",
     });
@@ -130,8 +130,8 @@ const authenticateUser = async (req, res) => {
     // cookie httpOnly para não depender de localStorage
     res.cookie("biblioFacil_token", token, {
       httpOnly: true,
-      sameSite: "none",
-      secure: false, // em produção, use: true (https)
+      sameSite: "lax",
+      secure: false, // em produção: true (https)
       maxAge: 12 * 60 * 60 * 1000,
       path: "/",
     });

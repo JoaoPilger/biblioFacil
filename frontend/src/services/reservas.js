@@ -69,17 +69,3 @@ export async function createReserva(payload) {
   }
 }
 
-export async function renovarEmprestimo(emprestimoId) {
-  try {
-    const response = await api.post(`/livros/emprestimos/${emprestimoId}/renovar`);
-    return response.data;
-  } catch (error) {
-    const msg =
-      error?.response?.data?.error ||
-      error?.response?.data?.message ||
-      "Falha ao renovar o empréstimo.";
-    const e = new Error(msg);
-    e.cause = error;
-    throw e;
-  }
-}
