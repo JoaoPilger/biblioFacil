@@ -7,8 +7,7 @@ import "./page_inicial.css";
 import useUniqueBooks from "../../hooks/useUniqueBooks";
 import useBookSearchNavigation from "../../hooks/useBookSearchNavigation";
 import { useAuth } from "../../context/authContext";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+import API_BASE from "../../lib/apiBase";
 
 function Hero({ user, totalBooks, loading }) {
   const secondaryCta =

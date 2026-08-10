@@ -13,24 +13,29 @@ const getBooks = async (req, res) => {
     const { genero, limit, search } = req.query; 
     const params = [];
     const conditions = [];
-    let query = "SELECT id, titulo, autor, genero, status, capa_url FROM livros";
+    let query = `
+      SELECT l.id, l.titulo, l.autor, l.genero, l.status, l.capa_url, COALESCE(l.quantidade_exemplares, 1) AS quantidade_exemplares,
+             GREATEST(0, COALESCE(l.quantidade_exemplares, 1) - (
+               COALESCE((SELECT COUNT(*) FROM reservas r WHERE r.livro_id = l.id AND r.status = 'pendente'), 0) +
+               COALESCE((SELECT COUNT(*) FROM emprestimos e WHERE e.livro_id = l.id AND e.status = 'ativo'), 0)
+             )) AS exemplares_disponiveis
+      FROM livros l`;
 
     if (genero) {
         params.push(genero);
-        conditions.push(`genero = $${params.length}`);
+        conditions.push(`l.genero = $${params.length}`);
     }
 
     if (search) {
         params.push(`%${search}%`);
-        
-        conditions.push(`(titulo ILIKE $${params.length} OR autor ILIKE $${params.length})`);
+        conditions.push(`(l.titulo ILIKE $${params.length} OR l.autor ILIKE $${params.length})`);
     }
 
     if (conditions.length > 0) {
         query += " WHERE " + conditions.join(" AND ");
     }
 
-    query += " ORDER BY created_at DESC";
+    query += " ORDER BY l.created_at DESC";
 
     if (limit) {
         params.push(parseInt(limit));
@@ -56,7 +61,11 @@ const getBookId = async (req, res) => {
 
     try {
         const result = await db.query(
-            "SELECT * FROM livros WHERE id = $1",
+            `SELECT l.*,
+                    COALESCE((SELECT COUNT(*) FROM reservas r WHERE r.livro_id = l.id AND r.status = 'pendente'), 0) AS reservas_ativas,
+                    COALESCE((SELECT COUNT(*) FROM emprestimos e WHERE e.livro_id = l.id AND e.status = 'ativo'), 0) AS emprestimos_ativos
+             FROM livros l
+             WHERE l.id = $1`,
             [id]
         );
 
@@ -64,15 +73,25 @@ const getBookId = async (req, res) => {
             return res.status(404).json({ error: "Livro não encontrado." });
         }
 
-        res.json(result.rows[0]);
+        const book = result.rows[0];
+        const qtd = Math.max(1, Number(book.quantidade_exemplares) || 1);
+        const ocupados = Number(book.reservas_ativas) + Number(book.emprestimos_ativos);
+        const disponiveis = Math.max(0, qtd - ocupados);
+
+        book.quantidade_exemplares = qtd;
+        book.exemplares_disponiveis = disponiveis;
+        book.exemplares_ocupados = ocupados;
+
+        res.json(book);
     } catch (error) {
+        console.error(error);
         res.status(500).json({error: "Erro ao buscar o livro."})
     }
 }
 
 // cadastrar livro
 const registerBook = async (req, res) => {
-    const { titulo, autor, ano_publ, edicao, editora, genero, isbn, paginas, sinopse, capa} = req.body;
+    const { titulo, autor, ano_publ, edicao, editora, genero, isbn, paginas, sinopse, capa, quantidade_exemplares} = req.body;
     console.log("Arquivo no Multer:", req.file);
 
     let capa_url = null;
@@ -80,14 +99,17 @@ const registerBook = async (req, res) => {
         capa_url = `/public/covers/${req.file.filename}`;
     }
 
-    const anoFormatado = (ano_publ && ano_publ.trim() !== "") ? parseInt(ano_publ) : null;
-    const paginasFormatadas = (paginas && paginas.trim() !== "") ? parseInt(paginas) : null;
-    const edicaoFormatada = (edicao && edicao !== "") ? parseInt(edicao) : null;
+    const anoFormatado = (ano_publ && String(ano_publ).trim() !== "") ? parseInt(ano_publ) : null;
+    const paginasFormatadas = (paginas && String(paginas).trim() !== "") ? parseInt(paginas) : null;
+    const edicaoFormatada = (edicao && String(edicao) !== "") ? parseInt(edicao) : null;
+    const qtdExemplares = (quantidade_exemplares && !Number.isNaN(parseInt(quantidade_exemplares)))
+      ? Math.max(1, parseInt(quantidade_exemplares))
+      : 1;
 
     try {
         await db.query(
-            "INSERT INTO livros (titulo, autor, ano_publ, edicao, editora, genero, isbn, paginas, sinopse, capa_url, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
-            [titulo, autor, anoFormatado, edicaoFormatada, editora, genero, isbn, paginasFormatadas, sinopse, capa_url, "disponivel"]
+            "INSERT INTO livros (titulo, autor, ano_publ, edicao, editora, genero, isbn, paginas, sinopse, capa_url, status, quantidade_exemplares) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+            [titulo, autor, anoFormatado, edicaoFormatada, editora, genero, isbn, paginasFormatadas, sinopse, capa_url, "disponivel", qtdExemplares]
         );
         res.status(201).json({ message: "Livro cadastrado!" });
 
@@ -99,21 +121,37 @@ const registerBook = async (req, res) => {
 
 // editar livro
 const modificateBook = async (req, res) => {
-    const { titulo, autor, ano_publ, edicao, editora, genero, isbn, paginas, sinopse, status} = req.body;
+    const { titulo, autor, ano_publ, edicao, editora, genero, isbn, paginas, sinopse, status, quantidade_exemplares} = req.body;
     const capa_url = req.file?.filename ? `/public/covers/${req.file.filename}` : null;
     const id = Number(req.params.id);
     const anoFormatado = parseOptionalInt(ano_publ);
     const paginasFormatadas = parseOptionalInt(paginas);
     const edicaoFormatada = parseOptionalInt(edicao);
+    const parsedQtd = parseOptionalInt(quantidade_exemplares);
+    const qtdExemplares = (parsedQtd && parsedQtd >= 1) ? parsedQtd : 1;
 
     if (Number.isNaN(id)) {
         return res.status(400).json({ error: "ID inválido." });
     }
 
     try {
+        // Obter contagem de reservas/empréstimos ativos
+        const counts = await db.query(
+            `SELECT
+               COALESCE((SELECT COUNT(*) FROM reservas WHERE livro_id = $1 AND status = 'pendente'), 0) AS reservas_ativas,
+               COALESCE((SELECT COUNT(*) FROM emprestimos WHERE livro_id = $1 AND status = 'ativo'), 0) AS emprestimos_ativos`,
+            [id]
+        );
+        const ocupados = Number(counts.rows[0].reservas_ativas) + Number(counts.rows[0].emprestimos_ativos);
+        const novoStatus = (qtdExemplares > ocupados) ? "disponivel" : (status || "indisponivel");
+
         const result = await db.query(
-            "UPDATE livros SET titulo = $1, autor = $2, ano_publ = $3, edicao = $4, editora = $5, genero = $6, isbn = $7, paginas = $8, sinopse = $9, status = $10, capa_url = COALESCE($11, capa_url) WHERE id = $12",
-            [titulo, autor, anoFormatado, edicaoFormatada, editora, genero, isbn, paginasFormatadas, sinopse, status, capa_url, id]
+            `UPDATE livros
+             SET titulo = $1, autor = $2, ano_publ = $3, edicao = $4, editora = $5, genero = $6, isbn = $7,
+                 paginas = $8, sinopse = $9, status = $10, capa_url = COALESCE($11, capa_url),
+                 quantidade_exemplares = $12
+             WHERE id = $13`,
+            [titulo, autor, anoFormatado, edicaoFormatada, editora, genero, isbn, paginasFormatadas, sinopse, novoStatus, capa_url, qtdExemplares, id]
         );
 
         if (result.rowCount === 0) {
@@ -174,7 +212,7 @@ function toSqlDateLocal(d) {
     return `${y}-${m}-${day}`;
 }
 
-/** POST /livros/:id/reservar — grava reserva e marca livro como reservado se estiver disponível */
+/** POST /livros/:id/reservar — grava reserva e marca livro como indisponivel se esgotar exemplares */
 const reserveBook = async (req, res) => {
     const livroId = Number(req.params.id);
     if (Number.isNaN(livroId)) {
@@ -226,17 +264,39 @@ const reserveBook = async (req, res) => {
         await client.query("BEGIN");
 
         const lock = await client.query(
-            "SELECT id, status FROM livros WHERE id = $1 FOR UPDATE",
+            `SELECT l.id, l.status, COALESCE(l.quantidade_exemplares, 1) AS quantidade_exemplares,
+                    COALESCE((SELECT COUNT(*) FROM reservas r WHERE r.livro_id = l.id AND r.status = 'pendente'), 0) AS reservas_ativas,
+                    COALESCE((SELECT COUNT(*) FROM emprestimos e WHERE e.livro_id = l.id AND e.status = 'ativo'), 0) AS emprestimos_ativos
+             FROM livros l WHERE l.id = $1 FOR UPDATE`,
             [livroId]
         );
         if (lock.rows.length === 0) {
             await client.query("ROLLBACK");
             return res.status(404).json({ error: "Livro não encontrado." });
         }
-        const st = String(lock.rows[0].status || "").toLowerCase();
-        if (st !== "disponivel") {
+
+        const book = lock.rows[0];
+        const totalQtd = Math.max(1, Number(book.quantidade_exemplares) || 1);
+        const ocupados = Number(book.reservas_ativas) + Number(book.emprestimos_ativos);
+        const disponiveis = totalQtd - ocupados;
+
+        if (disponiveis <= 0) {
             await client.query("ROLLBACK");
-            return res.status(409).json({ error: "Este livro não está disponível para reserva." });
+            return res.status(409).json({ error: "Não há exemplares disponíveis para este livro no momento." });
+        }
+
+        // Valida se o usuário já possui 1 exemplar reservado ou emprestado
+        const possuiJa = await client.query(
+            `SELECT 1 FROM (
+               SELECT user_id FROM reservas WHERE livro_id = $1 AND user_id = $2 AND status = 'pendente'
+               UNION ALL
+               SELECT user_id FROM emprestimos WHERE livro_id = $1 AND user_id = $2 AND status = 'ativo'
+             ) AS t LIMIT 1`,
+            [livroId, userId]
+        );
+        if (possuiJa.rows.length > 0) {
+            await client.query("ROLLBACK");
+            return res.status(409).json({ error: "Você já possui um exemplar deste livro emprestado ou reservado." });
         }
 
         const ins = await client.query(
@@ -246,13 +306,11 @@ const reserveBook = async (req, res) => {
             [livroId, userId, nome, email, retiradaSql, limiteSql, observacoes]
         );
 
-        const upd = await client.query(
-            "UPDATE livros SET status = 'reservado' WHERE id = $1 AND status = 'disponivel'",
-            [livroId]
-        );
-        if (upd.rowCount === 0) {
-            await client.query("ROLLBACK");
-            return res.status(409).json({ error: "Não foi possível reservar o livro (conflito de status)." });
+        if (disponiveis - 1 <= 0) {
+            await client.query(
+                "UPDATE livros SET status = 'indisponivel' WHERE id = $1",
+                [livroId]
+            );
         }
 
         await client.query("COMMIT");
@@ -263,11 +321,6 @@ const reserveBook = async (req, res) => {
     } catch (error) {
         await client.query("ROLLBACK");
         console.error("Erro ao reservar livro:", error);
-        if (error.code === "42P01") {
-            return res.status(500).json({
-                error: "Tabela de reservas não encontrada. Execute o script SQL atualizado (init.sql) no banco.",
-            });
-        }
         return res.status(500).json({ error: "Erro ao registrar reserva." });
     } finally {
         client.release();
@@ -330,7 +383,14 @@ const cancelarReserva = async (req, res) => {
 
         await client.query("UPDATE reservas SET status = 'cancelada' WHERE id = $1", [reservaId]);
         await client.query(
-            "UPDATE livros SET status = 'disponivel' WHERE id = $1 AND status = 'reservado'",
+            `UPDATE livros
+             SET status = 'disponivel'
+             WHERE id = $1 AND (
+               COALESCE(quantidade_exemplares, 1) > (
+                 (SELECT COUNT(*) FROM reservas WHERE livro_id = $1 AND status = 'pendente') +
+                 (SELECT COUNT(*) FROM emprestimos WHERE livro_id = $1 AND status = 'ativo')
+               )
+             )`,
             [livroId]
         );
 
@@ -344,6 +404,7 @@ const cancelarReserva = async (req, res) => {
         client.release();
     }
 };
+
 
 /** GET /livros/:id/meu-emprestimo — retorna o empréstimo ativo do usuário logado para este livro, se houver */
 const getMeuEmprestimo = async (req, res) => {
@@ -392,8 +453,35 @@ const getMinhasReservas = async (req, res) => {
         );
 
         const emprestimosResult = await db.query(
-            `SELECT e.id, e.livro_id, e.status, e.data_emprestimo, e.data_devolucao_prevista, e.data_devolucao_real,
-                    l.titulo, l.autor, l.capa_url
+            `SELECT
+               e.id,
+               e.livro_id,
+               e.status,
+               e.data_emprestimo,
+               e.data_devolucao_prevista,
+               e.data_devolucao_real,
+               e.renovacoes,
+               l.titulo,
+               l.autor,
+               l.capa_url,
+               -- Dias de atraso (0 se ainda no prazo)
+               GREATEST(0, CURRENT_DATE - e.data_devolucao_prevista::date) AS dias_atraso,
+               -- Multa acumulada em R$
+               GREATEST(0, CURRENT_DATE - e.data_devolucao_prevista::date)
+                 * (SELECT valor FROM config_multa WHERE chave = 'multa_diaria') AS multa_acumulada,
+               -- Pode renovar: ativo + sem reservas pendentes de outros + menos de 2 renovações
+               CASE
+                 WHEN e.status = 'ativo'
+                   AND e.renovacoes < 2
+                   AND NOT EXISTS (
+                     SELECT 1 FROM reservas r2
+                     WHERE r2.livro_id = e.livro_id
+                       AND r2.user_id  <> $1
+                       AND r2.status   = 'pendente'
+                   )
+                 THEN TRUE
+                 ELSE FALSE
+               END AS pode_renovar
              FROM emprestimos e
              JOIN livros l ON l.id = e.livro_id
              WHERE e.user_id = $1
@@ -408,6 +496,86 @@ const getMinhasReservas = async (req, res) => {
     }
 };
 
+/** POST /livros/emprestimos/:id/renovar — estende prazo do empréstimo em 7 dias (máximo 2 renovações) */
+const renovarEmprestimo = async (req, res) => {
+    const emprestimoId = Number(req.params.id);
+    if (Number.isNaN(emprestimoId)) {
+        return res.status(400).json({ error: "ID de empréstimo inválido." });
+    }
+
+    const userId = Number(req.user?.sub);
+    if (Number.isNaN(userId)) {
+        return res.status(401).json({ error: "Sessão inválida." });
+    }
+
+    const client = await db.connect();
+    try {
+        await client.query("BEGIN");
+
+        // Busca o empréstimo com lock
+        const empResult = await client.query(
+            `SELECT id, user_id, livro_id, status, data_devolucao_prevista, renovacoes
+             FROM emprestimos WHERE id = $1 FOR UPDATE`,
+            [emprestimoId]
+        );
+        if (empResult.rows.length === 0) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({ error: "Empréstimo não encontrado." });
+        }
+        const emp = empResult.rows[0];
+
+        // Valida dono
+        if (Number(emp.user_id) !== userId) {
+            await client.query("ROLLBACK");
+            return res.status(403).json({ error: "Acesso negado." });
+        }
+        // Valida status
+        if (emp.status !== "ativo") {
+            await client.query("ROLLBACK");
+            return res.status(409).json({ error: "Apenas empréstimos ativos podem ser renovados." });
+        }
+        // Valida limite de renovações
+        if (emp.renovacoes >= 2) {
+            await client.query("ROLLBACK");
+            return res.status(409).json({ error: "Limite de renovações atingido (máximo 2)." });
+        }
+
+        // Verifica reservas pendentes de outros usuários para o mesmo livro
+        const reservaConflito = await client.query(
+            `SELECT 1 FROM reservas
+             WHERE livro_id = $1 AND user_id <> $2 AND status = 'pendente'
+             LIMIT 1`,
+            [emp.livro_id, userId]
+        );
+        if (reservaConflito.rows.length > 0) {
+            await client.query("ROLLBACK");
+            return res.status(409).json({ error: "Renovação indisponível: livro reservado por outro leitor." });
+        }
+
+        // Extende 7 dias a partir da data de devolução prevista atual
+        const updated = await client.query(
+            `UPDATE emprestimos
+             SET data_devolucao_prevista = (data_devolucao_prevista::date + INTERVAL '7 days')::date,
+                 renovacoes = renovacoes + 1
+             WHERE id = $1
+             RETURNING id, data_devolucao_prevista, renovacoes`,
+            [emprestimoId]
+        );
+
+        await client.query("COMMIT");
+        res.json({
+            message: "Empréstimo renovado com sucesso.",
+            emprestimo: updated.rows[0],
+        });
+    } catch (error) {
+        await client.query("ROLLBACK");
+        console.error("Erro ao renovar empréstimo:", error);
+        res.status(500).json({ error: "Erro ao renovar empréstimo." });
+    } finally {
+        client.release();
+    }
+};
+
 module.exports = {
     registerBook,
     modificateBook,
@@ -419,4 +587,5 @@ module.exports = {
     cancelarReserva,
     getMeuEmprestimo,
     getMinhasReservas,
+    renovarEmprestimo,
 };
