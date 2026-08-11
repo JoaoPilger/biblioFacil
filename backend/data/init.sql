@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS livros (
     sinopse TEXT,
     capa_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    status VARCHAR(20) DEFAULT 'disponivel' CHECK (status IN ('disponivel', 'emprestado', 'reservado'))
+    status VARCHAR(20) DEFAULT 'disponivel' CHECK (status IN ('disponivel', 'emprestado', 'reservado', 'indisponivel'))
 );
 
 -- 3. TABELA DE EMPRÉSTIMOS (Relacionando usuários e livros)

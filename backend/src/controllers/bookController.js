@@ -1,4 +1,6 @@
 const db = require("../config/db");
+const emailService = require("../services/emailService");
+const notificationService = require("../services/notificationService");
 
 function parseOptionalInt(value) {
     if (value === undefined || value === null || String(value).trim() === "") {
@@ -18,7 +20,9 @@ const getBooks = async (req, res) => {
              GREATEST(0, COALESCE(l.quantidade_exemplares, 1) - (
                COALESCE((SELECT COUNT(*) FROM reservas r WHERE r.livro_id = l.id AND r.status = 'pendente'), 0) +
                COALESCE((SELECT COUNT(*) FROM emprestimos e WHERE e.livro_id = l.id AND e.status = 'ativo'), 0)
-             )) AS exemplares_disponiveis
+             )) AS exemplares_disponiveis,
+             COALESCE((SELECT ROUND(AVG(a.nota)::numeric, 1) FROM avaliacoes a WHERE a.livro_id = l.id), 0) AS media_avaliacao,
+             COALESCE((SELECT COUNT(*)::int FROM avaliacoes a WHERE a.livro_id = l.id), 0) AS total_avaliacoes
       FROM livros l`;
 
     if (genero) {
@@ -63,7 +67,9 @@ const getBookId = async (req, res) => {
         const result = await db.query(
             `SELECT l.*,
                     COALESCE((SELECT COUNT(*) FROM reservas r WHERE r.livro_id = l.id AND r.status = 'pendente'), 0) AS reservas_ativas,
-                    COALESCE((SELECT COUNT(*) FROM emprestimos e WHERE e.livro_id = l.id AND e.status = 'ativo'), 0) AS emprestimos_ativos
+                    COALESCE((SELECT COUNT(*) FROM emprestimos e WHERE e.livro_id = l.id AND e.status = 'ativo'), 0) AS emprestimos_ativos,
+                    COALESCE((SELECT ROUND(AVG(a.nota)::numeric, 1) FROM avaliacoes a WHERE a.livro_id = l.id), 0) AS media_avaliacao,
+                    COALESCE((SELECT COUNT(*)::int FROM avaliacoes a WHERE a.livro_id = l.id), 0) AS total_avaliacoes
              FROM livros l
              WHERE l.id = $1`,
             [id]
@@ -314,13 +320,35 @@ const reserveBook = async (req, res) => {
         }
 
         await client.query("COMMIT");
+
+        const reserva = ins.rows[0];
+        const livroInfo = await db.query("SELECT titulo FROM livros WHERE id = $1", [livroId]);
+
+        emailService.notifyReservaRegistrada({
+            email,
+            nome,
+            tituloLivro: livroInfo.rows[0]?.titulo || "Livro",
+            dataRetirada: reserva.data_retirada,
+            dataLimite: reserva.data_limite,
+        }).then(async (result) => {
+            if (result.sent) {
+                await notificationService.registrarEnvio("reserva_registrada", {
+                    userId,
+                    reservaId: reserva.id,
+                }).catch(() => {});
+            }
+        }).catch(() => {});
+
         return res.status(201).json({
             message: "Reserva registrada com sucesso.",
-            reserva: ins.rows[0],
+            reserva,
         });
     } catch (error) {
         await client.query("ROLLBACK");
         console.error("Erro ao reservar livro:", error);
+        if (error.code === "23514") {
+            return res.status(500).json({ error: "Erro de configuração do banco (status do livro). Contate o administrador." });
+        }
         return res.status(500).json({ error: "Erro ao registrar reserva." });
     } finally {
         client.release();
@@ -464,12 +492,11 @@ const getMinhasReservas = async (req, res) => {
                l.titulo,
                l.autor,
                l.capa_url,
-               -- Dias de atraso (0 se ainda no prazo)
+               av.id AS avaliacao_id,
+               av.nota AS avaliacao_nota,
                GREATEST(0, CURRENT_DATE - e.data_devolucao_prevista::date) AS dias_atraso,
-               -- Multa acumulada em R$
                GREATEST(0, CURRENT_DATE - e.data_devolucao_prevista::date)
                  * (SELECT valor FROM config_multa WHERE chave = 'multa_diaria') AS multa_acumulada,
-               -- Pode renovar: ativo + sem reservas pendentes de outros + menos de 2 renovações
                CASE
                  WHEN e.status = 'ativo'
                    AND e.renovacoes < 2
@@ -481,9 +508,11 @@ const getMinhasReservas = async (req, res) => {
                    )
                  THEN TRUE
                  ELSE FALSE
-               END AS pode_renovar
+               END AS pode_renovar,
+               CASE WHEN e.status = 'devolvido' AND av.id IS NULL THEN TRUE ELSE FALSE END AS pode_avaliar
              FROM emprestimos e
              JOIN livros l ON l.id = e.livro_id
+             LEFT JOIN avaliacoes av ON av.livro_id = e.livro_id AND av.user_id = e.user_id
              WHERE e.user_id = $1
              ORDER BY e.data_emprestimo DESC`,
             [userId]
@@ -576,6 +605,44 @@ const renovarEmprestimo = async (req, res) => {
     }
 };
 
+/** GET /livros/historico-leituras — empréstimos do usuário com datas e status de avaliação */
+const getHistoricoLeituras = async (req, res) => {
+    const userId = Number(req.user?.sub);
+    if (Number.isNaN(userId)) {
+        return res.status(401).json({ error: "Sessão inválida." });
+    }
+
+    try {
+        const result = await db.query(
+            `SELECT
+               e.id,
+               e.livro_id,
+               e.status,
+               e.data_emprestimo,
+               e.data_devolucao_prevista,
+               e.data_devolucao_real,
+               l.titulo,
+               l.autor,
+               l.capa_url,
+               av.id AS avaliacao_id,
+               av.nota AS avaliacao_nota,
+               av.comentario AS avaliacao_comentario,
+               CASE WHEN e.status = 'devolvido' AND av.id IS NULL THEN TRUE ELSE FALSE END AS pode_avaliar
+             FROM emprestimos e
+             JOIN livros l ON l.id = e.livro_id
+             LEFT JOIN avaliacoes av ON av.livro_id = e.livro_id AND av.user_id = e.user_id
+             WHERE e.user_id = $1
+             ORDER BY COALESCE(e.data_devolucao_real, e.data_emprestimo) DESC`,
+            [userId]
+        );
+
+        res.json({ items: result.rows });
+    } catch (error) {
+        console.error("Erro ao buscar histórico de leituras:", error);
+        res.status(500).json({ error: "Erro ao buscar histórico." });
+    }
+};
+
 module.exports = {
     registerBook,
     modificateBook,
@@ -588,4 +655,5 @@ module.exports = {
     getMeuEmprestimo,
     getMinhasReservas,
     renovarEmprestimo,
+    getHistoricoLeituras,
 };

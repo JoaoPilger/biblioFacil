@@ -54,13 +54,16 @@ function MultaBadge({ diasAtraso, multaAcumulada }) {
   );
 }
 
-function ItemCard({ item, navigate, actionLabel, onAction, busy, statusLabel, extraAction }) {
+function ItemCard({ item, navigate, actionLabel, onAction, busy, statusLabel, extraAction, metaLines }) {
   return (
     <div className="mr-card" onClick={() => navigate(`/livro/${item.livro_id}`)}>
       <img className="mr-card__cover" src={coverUrl(item.capa_url)} alt="" />
       <div className="mr-card__info">
         <h3 className="mr-card__title">{item.titulo}</h3>
         <p className="mr-card__subtitle">{item.autor}</p>
+        {metaLines?.map((line, i) => (
+          <p key={i} className="mr-card__meta">{line}</p>
+        ))}
         <span className="mr-card__badge">{statusLabel}</span>
         {item.status === "ativo" && (
           <MultaBadge
@@ -289,18 +292,54 @@ export default function MinhasReservas() {
           <EmptyState text="Nenhum histórico ainda." />
         ) : (
           <div className="mr-list">
-            {historico.map((item) => (
-              <ItemCard
-                key={`${item.__tipo}-${item.id}`}
-                item={item}
-                navigate={navigate}
-                statusLabel={
-                  item.__tipo === "reserva"
-                    ? RESERVA_STATUS_LABEL[item.status]
-                    : EMPRESTIMO_STATUS_LABEL[item.status]
-                }
-              />
-            ))}
+            {historico.map((item) => {
+              const isEmprestimo = item.__tipo === "emprestimo";
+              const metaLines = isEmprestimo
+                ? [
+                    `Empréstimo: ${formatDate(item.data_emprestimo)}`,
+                    item.data_devolucao_real
+                      ? `Devolvido: ${formatDate(item.data_devolucao_real)}`
+                      : `Devolução prevista: ${formatDate(item.data_devolucao_prevista)}`,
+                  ]
+                : [`Reserva: ${formatDate(item.created_at)}`];
+
+              const podeAvaliar = isEmprestimo && item.status === "devolvido" &&
+                (item.pode_avaliar === true || item.pode_avaliar === "true");
+              const temAvaliacao = isEmprestimo && item.avaliacao_id;
+
+              return (
+                <ItemCard
+                  key={`${item.__tipo}-${item.id}`}
+                  item={item}
+                  navigate={navigate}
+                  metaLines={metaLines}
+                  statusLabel={
+                    item.__tipo === "reserva"
+                      ? RESERVA_STATUS_LABEL[item.status]
+                      : EMPRESTIMO_STATUS_LABEL[item.status]
+                  }
+                  extraAction={
+                    podeAvaliar ? (
+                      <button
+                        type="button"
+                        className="mr-btn mr-btn--renovar"
+                        onClick={() => navigate(`/livro/${item.livro_id}#avaliar`)}
+                      >
+                        Avaliar
+                      </button>
+                    ) : temAvaliacao ? (
+                      <button
+                        type="button"
+                        className="mr-btn"
+                        onClick={() => navigate(`/livro/${item.livro_id}#avaliar`)}
+                      >
+                        Editar avaliação
+                      </button>
+                    ) : null
+                  }
+                />
+              );
+            })}
           </div>
         )}
       </main>

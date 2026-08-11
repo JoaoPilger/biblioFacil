@@ -127,6 +127,12 @@
   margin-bottom: 0.5rem;
 }
 
+.mr-card__meta {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin: 0.1rem 0;
+}
+
 .mr-card__badge {
   display: inline-block;
   font-size: 0.75rem;

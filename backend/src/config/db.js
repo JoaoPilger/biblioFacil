@@ -40,4 +40,24 @@ pool.query(`
   console.error("Aviso na verificação de constraints:", err.message);
 });
 
+// Auto-fix: inclui 'indisponivel' no CHECK de livros.status (usado ao esgotar exemplares)
+pool.query(`
+  DO $$
+  BEGIN
+    IF EXISTS (
+      SELECT 1 FROM pg_constraint c
+      JOIN pg_class t ON t.oid = c.conrelid
+      WHERE t.relname = 'livros'
+        AND c.conname = 'livros_status_check'
+        AND pg_get_constraintdef(c.oid) NOT LIKE '%indisponivel%'
+    ) THEN
+      ALTER TABLE livros DROP CONSTRAINT livros_status_check;
+      ALTER TABLE livros ADD CONSTRAINT livros_status_check
+        CHECK (status IN ('disponivel', 'emprestado', 'reservado', 'indisponivel'));
+    END IF;
+  END $$;
+`).catch((err) => {
+  console.error("Aviso na correção de livros.status:", err.message);
+});
+
 module.exports = pool;

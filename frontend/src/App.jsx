@@ -10,6 +10,8 @@ import ResultadoBusca from './pages/resultado_busca/resultado_busca'
 import Livro from './pages/livro/livro'
 import Circulacao from './pages/circulacao/circulacao'
 import MinhasReservas from './pages/minhas_reservas/minhas_reservas'
+import MeusFavoritos from './pages/favoritos/favoritos'
+import HistoricoLeituras from './pages/historico/historico'
 import './App.css'
 
 function App() {
@@ -50,6 +52,22 @@ function App() {
           element={
             <LeitorRoute>
               <MinhasReservas />
+            </LeitorRoute>
+          }
+        />
+        <Route
+          path="/meus-favoritos"
+          element={
+            <LeitorRoute>
+              <MeusFavoritos />
+            </LeitorRoute>
+          }
+        />
+        <Route
+          path="/historico-leituras"
+          element={
+            <LeitorRoute>
+              <HistoricoLeituras />
             </LeitorRoute>
           }
         />

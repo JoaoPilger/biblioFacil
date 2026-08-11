@@ -1,0 +1,143 @@
+.fav-app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg, #f5f0e8);
+  font-family: 'DM Sans', sans-serif;
+}
+
+.fav-main {
+  flex: 1;
+  max-width: 960px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.fav-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.75rem;
+  color: var(--brown-dark, #3d2b1f);
+  margin-bottom: 0.35rem;
+}
+
+.fav-subtitle {
+  color: var(--text-secondary, #7a6555);
+  margin-bottom: 1.5rem;
+}
+
+.fav-alert {
+  background: #fdecea;
+  color: #c0392b;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.fav-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-secondary, #7a6555);
+}
+
+.fav-link-btn {
+  margin-top: 1rem;
+  padding: 0.5rem 1.25rem;
+  border-radius: 20px;
+  border: none;
+  background: var(--brown-dark, #3d2b1f);
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+}
+
+.fav-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.fav-card {
+  background: #fff;
+  border: 1px solid var(--border, #e8dfd4);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.fav-card__cover {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  cursor: pointer;
+  background: linear-gradient(145deg, #d4c4b0, #b8a898);
+}
+
+.fav-card__body {
+  padding: 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fav-card__title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1rem;
+  cursor: pointer;
+  margin: 0;
+}
+
+.fav-card__title:hover {
+  color: var(--brown-mid, #7a5c48);
+}
+
+.fav-card__author {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #7a6555);
+  margin: 0;
+}
+
+.fav-card__rating {
+  margin: 0.25rem 0;
+}
+
+.fav-card__status {
+  font-size: 0.8rem;
+  color: #5a8a52;
+  font-weight: 500;
+}
+
+.fav-card__status--off {
+  color: #c0392b;
+}
+
+.fav-card__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.75rem;
+}
+
+.fav-btn {
+  flex: 1;
+  padding: 0.4rem 0.75rem;
+  border-radius: 18px;
+  border: 1px solid var(--border, #e8dfd4);
+  background: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.fav-btn--primary {
+  background: var(--brown-dark, #3d2b1f);
+  color: #fff;
+  border-color: var(--brown-dark, #3d2b1f);
+}
+
+.fav-btn:disabled {
+  opacity: 0.6;
+}

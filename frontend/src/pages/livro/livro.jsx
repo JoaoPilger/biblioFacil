@@ -1,11 +1,14 @@
 import "./livro.css";
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import Header from "../../components/header/Header"
 import Footer from "../../components/footer/Footer"
 import SearchBar from "../../components/searchBar/SearchBar";
 import ReservaModal from "../../components/reserva/ReservaModal";
+import AvaliacaoSection from "../../components/avaliacao/AvaliacaoSection";
+import FavoritoButton from "../../components/favorito/FavoritoButton";
+import { StarDisplay } from "../../components/avaliacao/StarRating";
 import useBookSearchNavigation from "../../hooks/useBookSearchNavigation";
 import { useAuth } from "../../context/authContext";
 import API_BASE from "../../lib/apiBase";
@@ -14,6 +17,8 @@ import {
   cancelarReserva,
   getMeuEmprestimo,
 } from "../../services/reservas";
+import { getAvaliacoes, getMinhaAvaliacao } from "../../services/avaliacoes";
+import { verificarFavorito, adicionarFavorito, removerFavorito } from "../../services/favoritos";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -38,6 +43,12 @@ function BookHero({
   canReserve,
   exemplaresDisponiveis = 1,
   quantidadeExemplares = 1,
+  mediaAvaliacao = 0,
+  totalAvaliacoes = 0,
+  favoritado,
+  onToggleFavorito,
+  favoritoBusy,
+  showFavorito,
 }) {
   const capa_url_completa = capa_url
   ? `${API_BASE}/${capa_url.replace("/public", "")}`
@@ -52,6 +63,14 @@ function BookHero({
       </div>
       <div className="book-hero__info">
         <h1 className="book-hero__title">{title} - {author}</h1>
+
+        {totalAvaliacoes > 0 && (
+          <div className="book-hero__rating">
+            <StarDisplay rating={mediaAvaliacao} size={18} />
+            <span>{Number(mediaAvaliacao).toFixed(1)} ({totalAvaliacoes})</span>
+          </div>
+        )}
+
         <div className="book-hero__status">
           <span className="status-dot" style={{ backgroundColor: temDisponivel ? '#7aaa72' : '#d9534f' }} />
           {meuEmprestimo
@@ -64,6 +83,13 @@ function BookHero({
         </div>
 
         <div className="book-hero__actions">
+          {showFavorito && (
+            <FavoritoButton
+              favoritado={favoritado}
+              onToggle={onToggleFavorito}
+              busy={favoritoBusy}
+            />
+          )}
           {!canReserve ? null : reservaPendente ? (
             <>
               <button className="btn-schedule btn-schedule--pending" type="button" disabled>
@@ -110,6 +136,7 @@ function Sinopse({ text }) {
 export default function BiblioFacilDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { search } = useBookSearchNavigation();
   const { authenticated, loading: authLoading, user } = useAuth();
   const [query, setQuery] = useState("");
@@ -119,6 +146,31 @@ export default function BiblioFacilDetail() {
   const [minhaReserva, setMinhaReserva] = useState(null);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [meuEmprestimo, setMeuEmprestimo] = useState(null);
+  const [avaliacoesData, setAvaliacoesData] = useState({ avaliacoes: [], media: 0, total: 0 });
+  const [minhaAvaliacaoData, setMinhaAvaliacaoData] = useState({ avaliacao: null, pode_avaliar: false });
+  const [favoritado, setFavoritado] = useState(false);
+  const [favoritoBusy, setFavoritoBusy] = useState(false);
+
+  const isBibliotecario = user?.tipo === "bibliotecario";
+
+  const loadAvaliacoes = useCallback(async () => {
+    if (!id) return;
+    try {
+      const data = await getAvaliacoes(id);
+      setAvaliacoesData(data);
+    } catch {
+      setAvaliacoesData({ avaliacoes: [], media: 0, total: 0 });
+    }
+  }, [id]);
+
+  const loadMinhaAvaliacao = useCallback(async () => {
+    if (!id || !authenticated || isBibliotecario) {
+      setMinhaAvaliacaoData({ avaliacao: null, pode_avaliar: false });
+      return;
+    }
+    const data = await getMinhaAvaliacao(id);
+    setMinhaAvaliacaoData(data);
+  }, [id, authenticated, isBibliotecario]);
 
   useEffect(() => {
     const fetchBook = async () => {
@@ -142,7 +194,21 @@ export default function BiblioFacilDetail() {
     if (id) fetchBook();
   }, [id]);
 
-  const isBibliotecario = user?.tipo === "bibliotecario";
+  useEffect(() => {
+    loadAvaliacoes();
+  }, [loadAvaliacoes]);
+
+  useEffect(() => {
+    loadMinhaAvaliacao();
+  }, [loadMinhaAvaliacao]);
+
+  useEffect(() => {
+    if (!id || authLoading || !authenticated || isBibliotecario) {
+      setFavoritado(false);
+      return;
+    }
+    verificarFavorito(id).then(setFavoritado);
+  }, [id, authenticated, authLoading, isBibliotecario]);
 
   useEffect(() => {
     if (!id || authLoading || !authenticated || isBibliotecario) {
@@ -172,6 +238,14 @@ export default function BiblioFacilDetail() {
     };
   }, [id, authenticated, authLoading, isBibliotecario]);
 
+  useEffect(() => {
+    if (location.hash === "#avaliar" && !loading && !authLoading) {
+      requestAnimationFrame(() => {
+        document.getElementById("avaliar")?.scrollIntoView({ behavior: "smooth" });
+      });
+    }
+  }, [location.hash, loading, authLoading]);
+
   const handleCancelReserva = async () => {
     if (!minhaReserva) return;
     setCancelBusy(true);
@@ -190,6 +264,40 @@ export default function BiblioFacilDetail() {
     }
   };
 
+  const handleToggleFavorito = async () => {
+    if (!authenticated) {
+      toast.error("Faça login para favoritar livros.");
+      navigate("/login");
+      return;
+    }
+    setFavoritoBusy(true);
+    try {
+      if (favoritado) {
+        await removerFavorito(id);
+        setFavoritado(false);
+        toast.success("Removido dos favoritos.");
+      } else {
+        await adicionarFavorito(id);
+        setFavoritado(true);
+        toast.success("Adicionado aos favoritos!");
+      }
+    } catch (error) {
+      toast.error(error?.message || "Erro ao atualizar favorito.");
+    } finally {
+      setFavoritoBusy(false);
+    }
+  };
+
+  const handleAvaliacaoSaved = async () => {
+    await loadAvaliacoes();
+    await loadMinhaAvaliacao();
+    const response = await fetch(`${API_BASE}/livros/${id}`);
+    if (response.ok) {
+      const data = await response.json();
+      setBook(data);
+    }
+  };
+
   const qtdTotal = Math.max(1, Number(book?.quantidade_exemplares) || 1);
   const dispCount = book?.exemplares_disponiveis !== undefined
     ? Number(book.exemplares_disponiveis)
@@ -198,9 +306,13 @@ export default function BiblioFacilDetail() {
   const reserveDisabled = authLoading || !authenticated || dispCount <= 0;
   const canEdit = authenticated && isBibliotecario;
   const canReserve = !isBibliotecario;
+  const showFavorito = authenticated && !isBibliotecario;
 
   if (loading) return <div>Carregando...</div>;
   if (!book) return <div>Livro não encontrado.</div>;
+
+  const mediaAvaliacao = book.media_avaliacao ?? avaliacoesData.media;
+  const totalAvaliacoes = book.total_avaliacoes ?? avaliacoesData.total;
 
   return (
     <div className="app">
@@ -224,6 +336,12 @@ export default function BiblioFacilDetail() {
           canReserve={canReserve}
           exemplaresDisponiveis={dispCount}
           quantidadeExemplares={qtdTotal}
+          mediaAvaliacao={mediaAvaliacao}
+          totalAvaliacoes={totalAvaliacoes}
+          favoritado={favoritado}
+          onToggleFavorito={handleToggleFavorito}
+          favoritoBusy={favoritoBusy}
+          showFavorito={showFavorito}
         />
         <Sinopse text={book.sinopse} />
         <div className="book-details-extra" style={{ padding: '0 20px', fontSize: '0.9rem' }}>
@@ -231,6 +349,21 @@ export default function BiblioFacilDetail() {
           <p><strong>Ano:</strong> {book.ano_publ || "—"}</p>
           <p><strong>Gênero:</strong> {book.genero || "—"}</p>
           <p><strong>Total de Exemplares:</strong> {qtdTotal}</p>
+        </div>
+
+        <div id="avaliar">
+          <AvaliacaoSection
+            bookId={id}
+            authenticated={authenticated}
+            isBibliotecario={isBibliotecario}
+            minhaAvaliacao={minhaAvaliacaoData.avaliacao}
+            podeAvaliar={minhaAvaliacaoData.pode_avaliar}
+            avaliacoes={avaliacoesData.avaliacoes}
+            media={mediaAvaliacao}
+            total={totalAvaliacoes}
+            onSaved={handleAvaliacaoSaved}
+            autoEdit={location.hash === "#avaliar"}
+          />
         </div>
       </main>
 

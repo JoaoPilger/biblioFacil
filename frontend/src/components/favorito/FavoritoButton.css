@@ -1,0 +1,35 @@
+.favorito-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  border: 1.5px solid var(--border, #e8dfd4);
+  background: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--text-primary, #3d2b1f);
+}
+
+.favorito-btn:hover:not(:disabled) {
+  border-color: #c0392b;
+  color: #c0392b;
+}
+
+.favorito-btn--active {
+  background: #fdf0ee;
+  border-color: #c0392b;
+  color: #c0392b;
+}
+
+.favorito-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.favorito-btn__icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}

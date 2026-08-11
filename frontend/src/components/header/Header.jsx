@@ -28,9 +28,17 @@ export default function Header() {
                 Confirmações
               </Link>
             ) : (
-              <Link to="/minhas-reservas" className="nav-link">
-                Minhas Reservas
-              </Link>
+              <>
+                <Link to="/minhas-reservas" className="nav-link">
+                  Minhas Reservas
+                </Link>
+                <Link to="/historico-leituras" className="nav-link">
+                  Histórico
+                </Link>
+                <Link to="/meus-favoritos" className="nav-link">
+                  Favoritos
+                </Link>
+              </>
             )}
             <div className="nav-avatar" aria-label="Usuário logado">
               <UserIcon />

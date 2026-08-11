@@ -1,6 +1,8 @@
 var express = require('express');
 var router = express.Router();
 const bookControler = require('../controllers/bookController');
+const avaliacaoController = require('../controllers/avaliacaoController');
+const favoritoController = require('../controllers/favoritoController');
 const authenticateToken = require('../middlewares/auth');
 const requireBibliotecario = require('../middlewares/auth').requireBibliotecario;
 
@@ -34,8 +36,25 @@ router.get('/:id/meu-emprestimo', authenticateToken, bookControler.getMeuEmprest
 // lista as reservas/empréstimos do usuário logado (precisa vir antes de /:id)
 router.get('/minhas-reservas', authenticateToken, bookControler.getMinhasReservas);
 
+// histórico de leituras (empréstimos devolvidos)
+router.get('/historico-leituras', authenticateToken, bookControler.getHistoricoLeituras);
+
+// favoritos (precisa vir antes de /:id)
+router.get('/favoritos', authenticateToken, favoritoController.listarFavoritos);
+
 // renovar empréstimo (Leitor) — precisa vir antes de /:id
 router.post('/emprestimos/:id/renovar', authenticateToken, bookControler.renovarEmprestimo);
+
+// avaliações (rotas específicas antes de /:id genérico onde aplicável)
+router.get('/:id/avaliacoes', avaliacaoController.listarAvaliacoes);
+router.get('/:id/avaliacoes/minha', authenticateToken, avaliacaoController.getMinhaAvaliacao);
+router.post('/:id/avaliacoes', authenticateToken, avaliacaoController.salvarAvaliacao);
+router.delete('/:id/avaliacoes/minha', authenticateToken, avaliacaoController.excluirMinhaAvaliacao);
+
+// favoritar livro
+router.get('/:id/favorito', authenticateToken, favoritoController.verificarFavorito);
+router.post('/:id/favoritar', authenticateToken, favoritoController.adicionarFavorito);
+router.delete('/:id/favoritar', authenticateToken, favoritoController.removerFavorito);
 
 // get específico
 router.get('/:id', bookControler.getBookId);

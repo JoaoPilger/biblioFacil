@@ -1,4 +1,6 @@
 const db = require("../config/db");
+const emailService = require("../services/emailService");
+const notificationService = require("../services/notificationService");
 
 // lista reservas aguardando retirada
 const listRetiradasPendentes = async (req, res) => {
@@ -74,15 +76,49 @@ const confirmarRetirada = async (req, res) => {
     );
 
     const livroUpd = await client.query(
-      "UPDATE livros SET status = 'emprestado' WHERE id = $1 AND status = 'reservado'",
+      `UPDATE livros
+       SET status = CASE
+         WHEN COALESCE(quantidade_exemplares, 1) > (
+           (SELECT COUNT(*) FROM reservas WHERE livro_id = $1 AND status = 'pendente') +
+           (SELECT COUNT(*) FROM emprestimos WHERE livro_id = $1 AND status = 'ativo')
+         ) THEN 'disponivel'
+         ELSE 'indisponivel'
+       END
+       WHERE id = $1`,
       [reserva.livro_id]
     );
     if (livroUpd.rowCount === 0) {
       await client.query("ROLLBACK");
-      return res.status(409).json({ error: "O livro não está mais reservado." });
+      return res.status(409).json({ error: "Livro não encontrado." });
     }
 
     await client.query("COMMIT");
+
+    const userInfo = await db.query(
+      "SELECT nome, email FROM users WHERE id = $1",
+      [reserva.user_id]
+    );
+    const livroInfo = await db.query(
+      "SELECT titulo FROM livros WHERE id = $1",
+      [reserva.livro_id]
+    );
+
+    if (userInfo.rows[0]?.email || reserva.email) {
+      emailService.notifyRetiradaConfirmada({
+        email: userInfo.rows[0]?.email || reserva.email,
+        nome: userInfo.rows[0]?.nome || reserva.nome,
+        tituloLivro: livroInfo.rows[0]?.titulo || "Livro",
+        dataDevolucao: reserva.data_limite,
+      }).then(async (result) => {
+        if (result.sent) {
+          await notificationService.registrarEnvio("retirada_confirmada", {
+            userId: reserva.user_id,
+            reservaId: reserva.id,
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+
     res.json({ message: "Retirada confirmada.", emprestimo: emprestimo.rows[0] });
   } catch (error) {
     await client.query("ROLLBACK");
@@ -124,17 +160,43 @@ const confirmarDevolucao = async (req, res) => {
     );
     await client.query(
       `UPDATE livros
-       SET status = 'disponivel'
-       WHERE id = $1 AND (
-         COALESCE(quantidade_exemplares, 1) > (
+       SET status = CASE
+         WHEN COALESCE(quantidade_exemplares, 1) > (
            (SELECT COUNT(*) FROM reservas WHERE livro_id = $1 AND status = 'pendente') +
            (SELECT COUNT(*) FROM emprestimos WHERE livro_id = $1 AND status = 'ativo')
-         )
-       )`,
+         ) THEN 'disponivel'
+         ELSE 'indisponivel'
+       END
+       WHERE id = $1`,
       [emprestimo.livro_id]
     );
 
     await client.query("COMMIT");
+
+    const userInfo = await db.query(
+      "SELECT nome, email FROM users WHERE id = $1",
+      [emprestimo.user_id]
+    );
+    const livroInfo = await db.query(
+      "SELECT titulo FROM livros WHERE id = $1",
+      [emprestimo.livro_id]
+    );
+
+    if (userInfo.rows[0]?.email) {
+      emailService.notifyDevolucaoConfirmada({
+        email: userInfo.rows[0].email,
+        nome: userInfo.rows[0].nome,
+        tituloLivro: livroInfo.rows[0]?.titulo || "Livro",
+      }).then(async (result) => {
+        if (result.sent) {
+          await notificationService.registrarEnvio("devolucao_confirmada", {
+            userId: emprestimo.user_id,
+            emprestimoId: emprestimo.id,
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+
     res.json({ message: "Devolução confirmada." });
   } catch (error) {
     await client.query("ROLLBACK");

@@ -13,9 +13,13 @@ var circulacaoRouter = require("./src/routes/circulacao");
 var multaRouter = require("./src/routes/multa");
 
 const { iniciarRotinaLimpeza } = require("./src/services/reservaCleanupService");
+const { iniciarRotinaNotificacoes } = require("./src/services/notificationService");
 
 // Inicia rotina em segundo plano para cancelar reservas expiradas (executa periodicamente)
 iniciarRotinaLimpeza();
+
+// Inicia rotina de alertas de vencimento por e-mail
+iniciarRotinaNotificacoes();
 
 var app = express();
 
