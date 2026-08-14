@@ -42,6 +42,13 @@ app.use('/livros', booksRouter);
 app.use('/circulacao', circulacaoRouter);
 app.use('/multa', multaRouter);
 
+// Fallback para o SPA: serve o index.html do frontend em rotas de navegação
+// (ex.: refresh em /login, /livro/5) que não batem em nenhuma rota de API.
+app.get(/^\/(?!users|auth|livros|circulacao|multa).*/, function (req, res, next) {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'), function (err) {
+    if (err) next();
+  });
+});
 
 app.use(function(req, res, next) {
   next(createError(404));

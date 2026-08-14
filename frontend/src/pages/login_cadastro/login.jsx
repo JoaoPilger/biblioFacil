@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { loginLocal } from "../../localAuth";
-import "./Login.css";
+import "./login.css";
 import {useAuth} from "../../context/authContext"
 import Header from "../../components/header/Header"
 import Footer from "../../components/footer/Footer"

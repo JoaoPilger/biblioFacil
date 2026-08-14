@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { registerLocal } from "../../localAuth";
-import "./Cadastro.css";
+import "./cadastro.css";
 import Header from "../../components/header/Header"
 import Footer from "../../components/footer/Footer"
 import { useAuth } from "../../context/authContext";
