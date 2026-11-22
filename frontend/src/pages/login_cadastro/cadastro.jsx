@@ -6,11 +6,6 @@ import Header from "../../components/header/Header"
 import Footer from "../../components/footer/Footer"
 import { useAuth } from "../../context/authContext";
 
-const TIPO_API = {
-  Leitor: "leitor",
-  Bibliotecário: "bibliotecario",
-};
-
 function isValidEmail(s) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
 }
@@ -24,7 +19,6 @@ export default function Cadastro() {
     emailConfirm: "",
     password: "",
     passwordConfirm: "",
-    tipo: "",
   });
   const [showPass, setShowPass] = useState(false);
   const [focused, setFocused] = useState("");
@@ -51,10 +45,6 @@ export default function Cadastro() {
       setStepError("Os e-mails não coincidem.");
       return;
     }
-    if (!form.tipo) {
-      setStepError("Selecione o tipo de usuário.");
-      return;
-    }
     setStep(2);
   }
 
@@ -73,16 +63,10 @@ export default function Cadastro() {
       setSubmitError("Aceite os termos para continuar.");
       return;
     }
-    var tipo = TIPO_API[form.tipo];
-    if (!tipo) {
-      setSubmitError("Tipo de usuário inválido.");
-      return;
-    }
     var result = await registerLocal({
       nome: form.nome.trim(),
       email: form.email.trim(),
       password: form.password,
-      tipo: tipo,
     });
     if (result.error) {
       setSubmitError(result.error);
@@ -167,32 +151,6 @@ export default function Cadastro() {
                       Os e-mails não coincidem
                     </span>
                   ) : null}
-                </div>
-
-                <div className="field-group">
-                  <span className="field-label">Tipo de Usuário</span>
-                  <div className="tipo-row">
-                    {["Leitor", "Bibliotecário"].map((t) => (
-                      <div
-                        key={t}
-                        className={`tipo-option${form.tipo === t ? " selected" : ""}`}
-                        onClick={() => set("tipo", t)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            set("tipo", t);
-                          }
-                        }}
-                        role="button"
-                        tabIndex={0}
-                      >
-                        <div className="tipo-radio">
-                          <div className="tipo-dot" />
-                        </div>
-                        <span className="tipo-text">{t}</span>
-                      </div>
-                    ))}
-                  </div>
                 </div>
 
                 <div className="btn-row">

@@ -3,6 +3,7 @@ var router = express.Router();
 const userController = require('../controllers/userController');
 const authenticateToken = require('../middlewares/auth');
 const db = require("../config/db");
+const requireBibliotecario = require('../middlewares/auth').requireBibliotecario;
 
 /* GET users listing. */
 router.get('/', function(req, res, next) {
@@ -12,6 +13,12 @@ router.get('/', function(req, res, next) {
 router.post('/cadastro', userController.registerUser);
 router.post('/login', userController.authenticateUser);
 router.post('/logout', authenticateToken, userController.logoutUser);
+router.post(
+  '/bibliotecarios',
+  authenticateToken,
+  requireBibliotecario,
+  userController.registerBibliotecario
+);
 
 router.get('/me', authenticateToken, (req, res) => {
   try {

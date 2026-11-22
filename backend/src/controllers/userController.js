@@ -62,29 +62,24 @@ const registerUser = async (req, res) => {
   const nome = String(req.body.nome || "").trim();
   const email = String(req.body.email || "").trim().toLowerCase();
   const password = String(req.body.password || "");
-  const tipo = String(req.body.tipo || "").trim().toLowerCase();
 
-  if (!nome || !email || !password || !tipo) {
+  if (!nome || !email || !password) {
     return res
       .status(400)
-      .json({ error: "Preencha nome, e-mail, senha e tipo de usuário." });
+      .json({ error: "Preencha nome, e-mail e senha." });
   }
 
   if (password.length < 8) {
     return res.status(400).json({ error: "A senha deve ter pelo menos 8 caracteres." });
   }
 
-  if (tipo !== "leitor" && tipo !== "bibliotecario") {
-    return res.status(400).json({ error: "Tipo de usuário inválido." });
-  }
-
   try {
     const query = `
       INSERT INTO users (nome, email, password_hash, tipo)
-      VALUES ($1, $2, $3, $4)
+      VALUES ($1, $2, $3, 'leitor')
       RETURNING id, nome, email, tipo, created_at
     `;
-    const values = [nome, email, await hashPassword(password), tipo];
+    const values = [nome, email, await hashPassword(password)];
     const result = await db.query(query, values);
     const user = result.rows[0];
 
@@ -194,4 +189,36 @@ const logoutUser = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, authenticateUser, logoutUser };
+const registerBibliotecario = async (req, res) => {
+  const nome = String(req.body.nome || "").trim();
+  const email = String(req.body.email || "").trim().toLowerCase();
+  const password = String(req.body.password || "");
+
+  if (!nome || !email || !password) {
+    return res.status(400).json({ error: "Preencha nome, e-mail e senha." });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ error: "A senha deve ter pelo menos 8 caracteres." });
+  }
+
+  try {
+    const result = await db.query(
+      `INSERT INTO users (nome, email, password_hash, tipo)
+       VALUES ($1, $2, $3, 'bibliotecario')
+       RETURNING id, nome, email, tipo, created_at`,
+      [nome, email, await hashPassword(password)]
+    );
+    return res.status(201).json({
+      message: "Bibliotecário cadastrado com sucesso.",
+      user: sanitizeUser(result.rows[0]),
+    });
+  } catch (error) {
+    if (error.code === "23505") {
+      return res.status(409).json({ error: "Este e-mail já está cadastrado." });
+    }
+    console.error("Erro ao cadastrar bibliotecário:", error);
+    return res.status(500).json({ error: "Erro interno no servidor." });
+  }
+};
+
+module.exports = { registerUser, authenticateUser, logoutUser, registerBibliotecario };
