@@ -174,6 +174,19 @@ export default function EditarLivro() {
   const handleCoverChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    const allowedTypes = ['image/png', 'image/jpeg'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Formato inválido. Use PNG, JPG ou JPEG.');
+      e.target.value = '';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Imagem muito grande. O limite é 5 MB.');
+      e.target.value = '';
+      return;
+    }
+
     setCoverFile(file);
     setCoverPreview(URL.createObjectURL(file));
   };
@@ -436,7 +449,7 @@ export default function EditarLivro() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg"
                 className="hidden-input"
                 onChange={handleCoverChange}
               />

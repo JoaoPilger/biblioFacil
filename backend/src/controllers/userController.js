@@ -1,8 +1,42 @@
 const crypto = require("crypto");
+const bcrypt = require("bcrypt");
 const db = require("../config/db");
 
-function hashPassword(password) {
-  return crypto.createHash("sha256").update(password).digest("hex");
+const BCRYPT_ROUNDS = 10;
+
+/**
+ * Gera hash bcrypt da senha.
+ */
+async function hashPassword(password) {
+  return bcrypt.hash(password, BCRYPT_ROUNDS);
+}
+
+/**
+ * Compara senha com o hash armazenado.
+ * Suporta hashes bcrypt (novos) e SHA-256 hex legados (migração transparente).
+ * Se a senha estiver correta e ainda for SHA-256, re-hasheia com bcrypt automaticamente.
+ */
+async function verifyPassword(inputPassword, storedHash, userId) {
+  const isBcrypt = /^\$2[aby]\$/.test(storedHash);
+
+  if (isBcrypt) {
+    return { valid: await bcrypt.compare(inputPassword, storedHash), upgraded: false };
+  }
+
+  // Fallback: hash SHA-256 legado
+  const legacyHash = crypto.createHash("sha256").update(inputPassword).digest("hex");
+  if (legacyHash !== storedHash) {
+    return { valid: false, upgraded: false };
+  }
+
+  // Senha correta — faz upgrade silencioso para bcrypt
+  if (userId) {
+    const newHash = await bcrypt.hash(inputPassword, BCRYPT_ROUNDS);
+    await db
+      .query("UPDATE users SET password_hash = $1 WHERE id = $2", [newHash, userId])
+      .catch((err) => console.error("Erro ao fazer upgrade de senha para bcrypt:", err));
+  }
+  return { valid: true, upgraded: true };
 }
 
 function sha256Hex(s) {
@@ -50,7 +84,7 @@ const registerUser = async (req, res) => {
       VALUES ($1, $2, $3, $4)
       RETURNING id, nome, email, tipo, created_at
     `;
-    const values = [nome, email, hashPassword(password), tipo];
+    const values = [nome, email, await hashPassword(password), tipo];
     const result = await db.query(query, values);
     const user = result.rows[0];
 
@@ -109,8 +143,8 @@ const authenticateUser = async (req, res) => {
     }
 
     const user = result.rows[0];
-    const inputPasswordHash = hashPassword(password);
-    if (user.password_hash !== inputPasswordHash) {
+    const { valid } = await verifyPassword(password, user.password_hash, user.id);
+    if (!valid) {
       return res.status(401).json({ error: "E-mail ou senha incorretos." });
     }
 

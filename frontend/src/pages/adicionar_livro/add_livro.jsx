@@ -23,9 +23,9 @@ const GENRES = [
 function ImageIcon() {
   return (
     <svg className="cover-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="6" y="10" width="52" height="44" rx="6" fill="#4a3728" opacity="0.7"/>
-      <circle cx="22" cy="26" r="6" fill="#f5ede6" opacity="0.6"/>
-      <path d="M6 42 L20 30 L32 40 L44 28 L58 42" stroke="#f5ede6" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.7"/>
+      <rect x="6" y="10" width="52" height="44" rx="6" fill="#4a3728" opacity="0.7" />
+      <circle cx="22" cy="26" r="6" fill="#f5ede6" opacity="0.6" />
+      <path d="M6 42 L20 30 L32 40 L44 28 L58 42" stroke="#f5ede6" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.7" />
     </svg>
   );
 }
@@ -88,6 +88,19 @@ export default function AdicionarLivro() {
   const handleCoverChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    const allowedTypes = ['image/png', 'image/jpeg'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Formato inválido. Use PNG, JPG ou JPEG.');
+      e.target.value = '';
+      return;
+    }
+    if (file.size > 1 * 1024 * 100) {
+      toast.error('Imagem muito grande. O limite é 100 KB.');
+      e.target.value = '';
+      return;
+    }
+
     setCoverFile(file);
     setCoverPreview(URL.createObjectURL(file));
   };
@@ -145,12 +158,12 @@ export default function AdicionarLivro() {
 
       setForm((prev) => ({
         ...prev,
-        titulo:   book.title                        || prev.titulo,
-        autor:    book.authors?.[0]?.name           || prev.autor,
-        editora:  book.publishers?.[0]?.name        || prev.editora,
-        ano_publ: ano                               || prev.ano_publ,
-        paginas:  String(book.number_of_pages || "") || prev.paginas,
-        sinopse:  sinopse                           || prev.sinopse,
+        titulo: book.title || prev.titulo,
+        autor: book.authors?.[0]?.name || prev.autor,
+        editora: book.publishers?.[0]?.name || prev.editora,
+        ano_publ: ano || prev.ano_publ,
+        paginas: String(book.number_of_pages || "") || prev.paginas,
+        sinopse: sinopse || prev.sinopse,
       }));
 
       // Tenta carregar a imagem da capa (OpenLibrary Cover API)
@@ -194,8 +207,8 @@ export default function AdicionarLivro() {
       Object.keys(form).forEach(key => {
         formData.append(key, form[key]);
       });
-      
-      if (coverFile) { 
+
+      if (coverFile) {
         formData.append('capa', coverFile);
       }
 
@@ -484,7 +497,7 @@ export default function AdicionarLivro() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/png,image/jpeg"
               className="hidden-input"
               onChange={handleCoverChange}
             />

@@ -12,16 +12,50 @@ const requireBibliotecario = require('../middlewares/auth').requireBibliotecario
 const multer = require('multer');
 const path = require('path');
 
+const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg'];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, './public/covers'); // Teste com caminho relativo simples
+    cb(null, './public/covers');
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, Date.now() + ext);
   }
 });
 
-const upload = multer({ storage });
+function fileFilter(req, file, cb) {
+  if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    const err = new multer.MulterError('LIMIT_UNEXPECTED_FILE', file.fieldname);
+    err.message = 'Formato de imagem inválido. Use PNG, JPG ou JPEG.';
+    return cb(err, false);
+  }
+  cb(null, true);
+}
+
+const upload = multer({
+  storage,
+  limits: { fileSize: MAX_FILE_SIZE },
+  fileFilter,
+});
+
+/** Trata erros do multer de forma centralizada */
+function handleUpload(field) {
+  return (req, res, next) => {
+    upload.single(field)(req, res, (err) => {
+      if (!err) return next();
+      if (err instanceof multer.MulterError) {
+        const msg =
+          err.code === 'LIMIT_FILE_SIZE'
+            ? 'Arquivo muito grande. O limite é 5 MB.'
+            : err.message || 'Erro no envio do arquivo.';
+        return res.status(400).json({ error: msg });
+      }
+      next(err);
+    });
+  };
+}
 
 // ROTAS COMUNS
 // get geral
@@ -66,7 +100,7 @@ router.post(
   '/cadastrar',
   authenticateToken,
   requireBibliotecario,
-  upload.single('capa'),
+  handleUpload('capa'),
   bookControler.registerBook
 );
 
@@ -75,7 +109,7 @@ router.put(
   '/editar/:id',
   authenticateToken,
   requireBibliotecario,
-  upload.single('capa'),
+  handleUpload('capa'),
   bookControler.modificateBook
 );
 
