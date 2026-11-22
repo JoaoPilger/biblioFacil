@@ -91,3 +91,43 @@ npm run dev
 npm run build
 npm run lint
 ```
+
+## Testes de reservas e empréstimos
+
+A suíte de circulação usa PostgreSQL real e as rotas HTTP, incluindo autenticação
+e permissões. Aponte `TEST_DATABASE_URL` para um banco **descartável de testes**
+(PostgreSQL 14 ou superior), com permissão para criar schemas:
+
+```powershell
+cd backend
+$env:TEST_DATABASE_URL = "postgresql://localhost/bibliofacil_test"
+npm test
+```
+
+Configure a autenticação local do PostgreSQL para o usuário que executa os testes.
+A suíte cria um schema aleatório, aplica `data/init.sql` e as migrations nesse
+schema e o remove ao terminar. Os testes de e-mail usam um serviço simulado e não
+enviam mensagens. Sem `TEST_DATABASE_URL`, somente a suíte de circulação é marcada
+como ignorada; os outros testes continuam executando.
+
+São verificados:
+
+- Disputa simultânea pelo último exemplar: uma reserva aceita (`201`) e uma
+  recusada (`409`), sem exceder a quantidade disponível.
+- Múltiplos exemplares e bloqueio de reservas duplicadas pelo mesmo leitor.
+- Datas válidas, retirada a partir de hoje e período de até 14 dias.
+- Retirada dentro do período da reserva, com leitor válido, e conversão única em
+  empréstimo, inclusive com confirmações simultâneas.
+- Renovação somente pelo dono de empréstimo ativo, até duas vezes, de sete dias
+  cada, sem reserva pendente de outro leitor. Rejeições preservam prazo e contador.
+- Devolução única, cancelamento e expiração de reservas, recalculando a
+  disponibilidade a partir das reservas pendentes e empréstimos ativos.
+- Rollback integral após falhas de banco e sucesso preservado quando o serviço
+  de e-mail falha.
+
+As alterações de circulação bloqueiam primeiro o livro e depois a reserva ou o
+empréstimo. A contagem de ocupação ocorre em outra consulta, após adquirir o lock,
+para observar operações recém-confirmadas conforme o isolamento
+[READ COMMITTED do PostgreSQL](https://www.postgresql.org/docs/14/transaction-iso.html).
+As regras atuais não incluem bloqueio de renovação por atraso; esta alteração
+preserva essa política.

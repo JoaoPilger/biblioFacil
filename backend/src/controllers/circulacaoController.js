@@ -1,6 +1,7 @@
 const db = require("../config/db");
 const emailService = require("../services/emailService");
 const notificationService = require("../services/notificationService");
+const { atualizarDisponibilidade } = require("../services/circulacaoService");
 
 // lista reservas aguardando retirada
 const listRetiradasPendentes = async (req, res) => {
@@ -52,8 +53,14 @@ const confirmarRetirada = async (req, res) => {
   try {
     await client.query("BEGIN");
 
+    await client.query(
+      `SELECT l.id FROM livros l JOIN reservas r ON r.livro_id = l.id
+       WHERE r.id = $1 FOR UPDATE OF l`, [id]
+    );
     const reservaResult = await client.query(
-      "SELECT * FROM reservas WHERE id = $1 FOR UPDATE",
+      `SELECT *, data_limite < CURRENT_DATE AS expirada,
+                 data_retirada > CURRENT_DATE AS futura
+       FROM reservas WHERE id = $1 FOR UPDATE`,
       [id]
     );
     if (reservaResult.rows.length === 0) {
@@ -65,6 +72,10 @@ const confirmarRetirada = async (req, res) => {
       await client.query("ROLLBACK");
       return res.status(409).json({ error: "Esta reserva já foi processada." });
     }
+    if (reserva.expirada || reserva.futura || reserva.user_id == null) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ error: "Reserva fora do período de retirada ou sem leitor válido." });
+    }
 
     await client.query("UPDATE reservas SET status = 'confirmada' WHERE id = $1", [id]);
 
@@ -75,33 +86,21 @@ const confirmarRetirada = async (req, res) => {
       [reserva.user_id, reserva.livro_id, reserva.data_limite]
     );
 
-    const livroUpd = await client.query(
-      `UPDATE livros
-       SET status = CASE
-         WHEN COALESCE(quantidade_exemplares, 1) > (
-           (SELECT COUNT(*) FROM reservas WHERE livro_id = $1 AND status = 'pendente') +
-           (SELECT COUNT(*) FROM emprestimos WHERE livro_id = $1 AND status = 'ativo')
-         ) THEN 'disponivel'
-         ELSE 'indisponivel'
-       END
-       WHERE id = $1`,
-      [reserva.livro_id]
-    );
+    const livroUpd = await atualizarDisponibilidade(client, reserva.livro_id);
     if (livroUpd.rowCount === 0) {
       await client.query("ROLLBACK");
       return res.status(409).json({ error: "Livro não encontrado." });
     }
 
-    await client.query("COMMIT");
-
-    const userInfo = await db.query(
+    const userInfo = await client.query(
       "SELECT nome, email FROM users WHERE id = $1",
       [reserva.user_id]
     );
-    const livroInfo = await db.query(
+    const livroInfo = await client.query(
       "SELECT titulo FROM livros WHERE id = $1",
       [reserva.livro_id]
     );
+    await client.query("COMMIT");
 
     if (userInfo.rows[0]?.email || reserva.email) {
       emailService.notifyRetiradaConfirmada({
@@ -140,6 +139,10 @@ const confirmarDevolucao = async (req, res) => {
   try {
     await client.query("BEGIN");
 
+    await client.query(
+      `SELECT l.id FROM livros l JOIN emprestimos e ON e.livro_id = l.id
+       WHERE e.id = $1 FOR UPDATE OF l`, [id]
+    );
     const emprestimoResult = await client.query(
       "SELECT * FROM emprestimos WHERE id = $1 FOR UPDATE",
       [id]
@@ -158,29 +161,17 @@ const confirmarDevolucao = async (req, res) => {
       "UPDATE emprestimos SET status = 'devolvido', data_devolucao_real = CURRENT_TIMESTAMP WHERE id = $1",
       [id]
     );
-    await client.query(
-      `UPDATE livros
-       SET status = CASE
-         WHEN COALESCE(quantidade_exemplares, 1) > (
-           (SELECT COUNT(*) FROM reservas WHERE livro_id = $1 AND status = 'pendente') +
-           (SELECT COUNT(*) FROM emprestimos WHERE livro_id = $1 AND status = 'ativo')
-         ) THEN 'disponivel'
-         ELSE 'indisponivel'
-       END
-       WHERE id = $1`,
-      [emprestimo.livro_id]
-    );
+    await atualizarDisponibilidade(client, emprestimo.livro_id);
 
-    await client.query("COMMIT");
-
-    const userInfo = await db.query(
+    const userInfo = await client.query(
       "SELECT nome, email FROM users WHERE id = $1",
       [emprestimo.user_id]
     );
-    const livroInfo = await db.query(
+    const livroInfo = await client.query(
       "SELECT titulo FROM livros WHERE id = $1",
       [emprestimo.livro_id]
     );
+    await client.query("COMMIT");
 
     if (userInfo.rows[0]?.email) {
       emailService.notifyDevolucaoConfirmada({

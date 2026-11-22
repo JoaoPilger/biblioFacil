@@ -1,15 +1,23 @@
 const db = require("../config/db");
+const { atualizarDisponibilidade } = require("./circulacaoService");
 
 /**
  * Cancela reservas pendentes que ultrapassaram a data limite (data_limite < CURRENT_DATE)
- * e libera os respectivos livros alterando seu status para 'disponivel'.
+ * e recalcula a disponibilidade considerando reservas e empréstimos restantes.
  */
 const cancelarReservasExpiradas = async () => {
   const client = await db.connect();
   try {
     await client.query("BEGIN");
 
-    // Seleciona reservas pendentes expiradas
+    // Mesma ordem dos demais escritores: livro antes de reserva. A seleção
+    // seguinte reavalia expiração/status depois de qualquer espera pelo lock.
+    await client.query(
+      `SELECT l.id FROM livros l WHERE EXISTS (
+         SELECT 1 FROM reservas r WHERE r.livro_id = l.id
+         AND r.status = 'pendente' AND r.data_limite < CURRENT_DATE
+       ) ORDER BY l.id FOR UPDATE OF l`
+    );
     const expiradas = await client.query(
       `SELECT id, livro_id 
        FROM reservas 
@@ -33,25 +41,21 @@ const cancelarReservasExpiradas = async () => {
       [reservaIds]
     );
 
-    // Libera livros cuja reserva expirou e que não possuem outra reserva pendente ativa
-    const updLivros = await client.query(
-      `UPDATE livros 
-       SET status = 'disponivel' 
-       WHERE id = ANY($1::int[]) 
-         AND status = 'reservado'
-         AND id NOT IN (SELECT livro_id FROM reservas WHERE status = 'pendente')`,
-      [livroIds]
-    );
+    let livrosLiberados = 0;
+    for (const livroId of livroIds) {
+      const result = await atualizarDisponibilidade(client, livroId);
+      if (result.rows[0]?.status === 'disponivel') livrosLiberados++;
+    }
 
     await client.query("COMMIT");
 
     console.log(
-      `[Limpeza de Reservas] ${reservaIds.length} reserva(s) expirada(s) cancelada(s). ${updLivros.rowCount} livro(s) liberado(s).`
+      `[Limpeza de Reservas] ${reservaIds.length} reserva(s) expirada(s) cancelada(s). ${livrosLiberados} livro(s) liberado(s).`
     );
 
     return {
       canceladas: reservaIds.length,
-      livrosLiberados: updLivros.rowCount,
+      livrosLiberados,
     };
   } catch (error) {
     await client.query("ROLLBACK");

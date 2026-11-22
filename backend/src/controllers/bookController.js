@@ -1,6 +1,7 @@
 const db = require("../config/db");
 const emailService = require("../services/emailService");
 const notificationService = require("../services/notificationService");
+const { bloquearLivro, atualizarDisponibilidade } = require("../services/circulacaoService");
 
 function parseOptionalInt(value) {
     if (value === undefined || value === null || String(value).trim() === "") {
@@ -198,7 +199,9 @@ function parseDateOnlyBr(s) {
     const y = Number(m[1]);
     const mo = Number(m[2]);
     const d = Number(m[3]);
-    return new Date(y, mo - 1, d, 0, 0, 0, 0);
+    const date = new Date(y, mo - 1, d, 0, 0, 0, 0);
+    return date.getFullYear() === y && date.getMonth() === mo - 1 && date.getDate() === d
+        ? date : null;
 }
 
 function startOfTodayLocal() {
@@ -269,11 +272,12 @@ const reserveBook = async (req, res) => {
     try {
         await client.query("BEGIN");
 
+        await bloquearLivro(client, livroId);
         const lock = await client.query(
             `SELECT l.id, l.status, COALESCE(l.quantidade_exemplares, 1) AS quantidade_exemplares,
                     COALESCE((SELECT COUNT(*) FROM reservas r WHERE r.livro_id = l.id AND r.status = 'pendente'), 0) AS reservas_ativas,
                     COALESCE((SELECT COUNT(*) FROM emprestimos e WHERE e.livro_id = l.id AND e.status = 'ativo'), 0) AS emprestimos_ativos
-             FROM livros l WHERE l.id = $1 FOR UPDATE`,
+             FROM livros l WHERE l.id = $1`,
             [livroId]
         );
         if (lock.rows.length === 0) {
@@ -319,10 +323,9 @@ const reserveBook = async (req, res) => {
             );
         }
 
-        await client.query("COMMIT");
-
         const reserva = ins.rows[0];
-        const livroInfo = await db.query("SELECT titulo FROM livros WHERE id = $1", [livroId]);
+        const livroInfo = await client.query("SELECT titulo FROM livros WHERE id = $1", [livroId]);
+        await client.query("COMMIT");
 
         emailService.notifyReservaRegistrada({
             email,
@@ -399,6 +402,7 @@ const cancelarReserva = async (req, res) => {
     try {
         await client.query("BEGIN");
 
+        await bloquearLivro(client, livroId);
         const reservaResult = await client.query(
             `SELECT id FROM reservas WHERE livro_id = $1 AND user_id = $2 AND status = 'pendente' FOR UPDATE`,
             [livroId, userId]
@@ -410,17 +414,7 @@ const cancelarReserva = async (req, res) => {
         const reservaId = reservaResult.rows[0].id;
 
         await client.query("UPDATE reservas SET status = 'cancelada' WHERE id = $1", [reservaId]);
-        await client.query(
-            `UPDATE livros
-             SET status = 'disponivel'
-             WHERE id = $1 AND (
-               COALESCE(quantidade_exemplares, 1) > (
-                 (SELECT COUNT(*) FROM reservas WHERE livro_id = $1 AND status = 'pendente') +
-                 (SELECT COUNT(*) FROM emprestimos WHERE livro_id = $1 AND status = 'ativo')
-               )
-             )`,
-            [livroId]
-        );
+        await atualizarDisponibilidade(client, livroId);
 
         await client.query("COMMIT");
         res.json({ message: "Reserva cancelada." });
@@ -541,6 +535,10 @@ const renovarEmprestimo = async (req, res) => {
     try {
         await client.query("BEGIN");
 
+        await client.query(
+            `SELECT l.id FROM livros l JOIN emprestimos e ON e.livro_id = l.id
+             WHERE e.id = $1 FOR UPDATE OF l`, [emprestimoId]
+        );
         // Busca o empréstimo com lock
         const empResult = await client.query(
             `SELECT id, user_id, livro_id, status, data_devolucao_prevista, renovacoes
