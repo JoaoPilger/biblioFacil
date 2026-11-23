@@ -59,13 +59,17 @@ O Vite informa o endereço local da interface, normalmente `http://localhost:517
 
 O cadastro público cria exclusivamente contas de leitor. O perfil é definido no backend e não pode ser alterado enviando outro valor no campo `tipo`.
 
-Para criar o primeiro bibliotecário, uma pessoa com acesso ao servidor e ao banco executa no diretório `backend`:
+Para criar o primeiro bibliotecário, execute no diretório `backend`:
 
 ```powershell
-npm run create-bibliotecario -- "Nome do Bibliotecário" "bibliotecario@exemplo.com"
+node scripts/create-bibliotecario.js
 ```
 
-O comando solicita a senha sem exibi-la no terminal. Após a criação da primeira conta, bibliotecários autenticados podem cadastrar outros pela rota `POST /users/bibliotecarios`. A rota exige sessão e perfil de bibliotecário; leitores e pessoas não autenticadas não têm permissão.
+O comando solicitará o nome, e-mail e senha de forma interativa. Alternativamente, você pode informar os parâmetros diretamente na linha de comando:
+
+```powershell
+node scripts/create-bibliotecario.js "Nome do Bibliotecário" "bibliotecario@exemplo.com" "senha123456"
+``` Após a criação da primeira conta, bibliotecários autenticados podem cadastrar outros pela rota `POST /users/bibliotecarios`. A rota exige sessão e perfil de bibliotecário; leitores e pessoas não autenticadas não têm permissão.
 
 ## Segurança
 

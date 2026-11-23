@@ -1,5 +1,13 @@
+const path = require("path");
+const fs = require("fs");
 const { Pool } = require("pg");
-require("dotenv").config();
+
+const localEnv = path.resolve(__dirname, "../../.env");
+if (fs.existsSync(localEnv)) {
+  require("dotenv").config({ path: localEnv });
+} else {
+  require("dotenv").config();
+}
 
 function envTrim(key) {
   const v = process.env[key];
@@ -37,7 +45,8 @@ pool.query(`
     END IF; 
   END $$;
 `).catch((err) => {
-  console.error("Aviso na verificação de constraints:", err.message);
+  const msg = err.message || err.code || String(err);
+  console.error("Aviso na verificação de constraints:", msg);
 });
 
 // Auto-fix: inclui 'indisponivel' no CHECK de livros.status (usado ao esgotar exemplares)
@@ -57,7 +66,8 @@ pool.query(`
     END IF;
   END $$;
 `).catch((err) => {
-  console.error("Aviso na correção de livros.status:", err.message);
+  const msg = err.message || err.code || String(err);
+  console.error("Aviso na correção de livros.status:", msg);
 });
 
 module.exports = pool;
